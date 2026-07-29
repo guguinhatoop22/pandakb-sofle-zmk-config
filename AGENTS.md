@@ -25,7 +25,7 @@ The build workflow delegates to `zmkfirmware/zmk/.github/workflows/build-user-co
 ## Where To Change Things
 
 - User key behavior, layers, combos, macros, and encoder actions: `config/Sofle.keymap`.
-- Firmware feature flags and power/display/RGB/BLE options: `config/Sofle.conf`.
+- Firmware feature flags and power/display/RGB/BLE options: `config/Sofle.conf` (standalone OLED halves) or `config/Sofle_dongle_left.conf` / `config/Sofle_dongle_right.conf` / `config/Sofle_dongle_central.conf` (dongle variant).
 - Build target or artifact changes: `build.yaml`.
 - ZMK/module dependency changes: `config/west.yml`.
 - Matrix pins, encoder pins, OLED, RGB chain length, or transforms: `boards/shields/Sofle/` only when the task is explicitly hardware-related.
@@ -38,9 +38,9 @@ There is also `config/Sofle_dongle.keymap`, a symlink to `config/Sofle.keymap` u
 
 ## Keymap Constraints
 
-- Active layers are `BASE 0`, `LOWER 1`, `RAISE 2`, `ADJUST 3`; `ADJUST` is a conditional layer when `LOWER` and `RAISE` are both active.
-- Preserve Bluetooth profile select/clear reachability on `RAISE`/`ADJUST`, external power toggle on `LOWER`/`ADJUST`, and RGB controls on `ADJUST` unless the user asks otherwise.
-- Current encoders: left volume via `inc_dec_kp`; right mouse-wheel scroll via `inc_dec_msc` from `<dt-bindings/zmk/pointing.h>`.
+- Active layers are `BASE 0`, `GAMING 1`, `SYMBOLS 2`, `EDITING 3`, `ADJUST 4`; `ADJUST` is a conditional layer when `SYMBOLS` and `EDITING` are both active.
+- `ADJUST` holds Bluetooth profile select/clear, external power toggle, RGB controls, and layer-select shortcuts (`&to GAMING`, `&to BASE`). Preserve this reachability unless the user asks otherwise.
+- Current encoders: left volume via `inc_dec_kp C_VOL_DN/C_VOL_UP` on every layer; right virtual-desktop switch via `inc_dec_kp LC(LA(PG_UP)) LC(LA(PG_DN))` on every layer except `ADJUST` (which has no sensor-bindings). Not `LC(LG(...))` (Ctrl+Meta) — that clashed with Meta-drag window moving in KWin.
 - Keep each `bindings = < ... >;` layer at the matrix-transform count in `boards/shields/Sofle/Sofle.dtsi` and preserve the matrix-shaped formatting.
 
 ## Hardware Model
@@ -51,6 +51,8 @@ There is also `config/Sofle_dongle.keymap`, a symlink to `config/Sofle.keymap` u
 - Battery reporting uses `zmk,battery-nrf-vddh` in each side overlay.
 - WS2812 RGB is on SPI in `Sofle.dtsi` with `chain-length = <36>`; be conservative with power-hungry changes on this wireless build.
 - The Prospector dongle variant (`boards/shields/Sofle_dongle/`) uses the same PCB/pin mapping as `Sofle_L`/`Sofle_R` for its left/right peripherals, but neither half is central — `Sofle_dongle_central` (built for `seeeduino_xiao_ble`, paired with the `prospector-zmk-module`'s `prospector_adapter` shield) is. Peripherals in this variant have no OLED.
+- `Sofle_dongle_central.overlay` wires an unused SPI pin to a fake `zmk,underglow` chosen node (`chain-length = <1>`, nothing physically attached) purely so `CONFIG_ZMK_RGB_UNDERGLOW` compiles on the dongle; this lets `BEHAVIOR_LOCALITY_GLOBAL` RGB behaviors (`RGB_TOG`/hue/effect) forward from the dongle to the halves' real LED strips.
+- Dongle-mode peripherals (`config/Sofle_dongle_left.conf` / `_right.conf`) run `CONFIG_ZMK_RGB_UNDERGLOW_EXT_POWER=y` (cuts the WS2812 VCC rail on `RGB_TOG` so all 36 chips stop drawing quiescent current) and ZMK's default `*_LATENCY=30` (not `0`) to conserve peripheral battery; do not change these without understanding the battery-life tradeoff.
 
 ## Validation
 
@@ -61,7 +63,7 @@ west build -s zmk/app -b nice_nano_v2 -- -DSHIELD="Sofle_L nice_oled" -DSNIPPET=
 west build -s zmk/app -b nice_nano_v2 -- -DSHIELD="Sofle_R nice_oled" -DZMK_CONFIG="$PWD/config"
 ```
 
-If local ZMK dependencies are unavailable, validate by inspection: `build.yaml` still includes the three intended targets, keymap/devicetree braces and semicolons are balanced, every keymap layer has the transform binding count, and `.conf` lines are valid `CONFIG_NAME=value` entries.
+If local ZMK dependencies are unavailable, validate by inspection: `build.yaml` still includes the intended targets, keymap/devicetree braces and semicolons are balanced, every keymap layer has the transform binding count, and `.conf` lines are valid `CONFIG_NAME=value` entries.
 
 The keymap drawing workflow watches `config/*.keymap`, `config/config_keymap-drawer.yaml`, and `.github/workflows/keymap-drawer.yaml`; it writes to `keymap-drawer/` with `amend_commit: true`.
 
