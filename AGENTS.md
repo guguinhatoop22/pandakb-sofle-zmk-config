@@ -16,6 +16,10 @@ This is a ZMK user config plus a local `Sofle` shield for a PandaKB Sofle RGB MX
 - seeeduino_xiao_ble + settings_reset
 ```
 
+On pushes to `main`, `.github/workflows/build.yml` also republishes the rolling `latest` GitHub
+Release, packing the merged `firmware` artifact into a single `firmware.zip`. The release body
+lists whatever the artifact actually contains, so build target changes need no workflow edit.
+
 The build workflow delegates to `zmkfirmware/zmk/.github/workflows/build-user-config.yml@v0.3`; dependency versions come from `config/west.yml` (`zmk` default revision `v0.3`, `zmk-nice-oled` from `mctechnology17` on `main`, `self.path: config`). The dongle build also pulls in `prospector-zmk-module` (`carrefinho`, `main`). Do not casually change revisions or remove `zephyr/module.yml`.
 
 ## Where To Change Things

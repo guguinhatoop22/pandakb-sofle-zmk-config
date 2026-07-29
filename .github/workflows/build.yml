@@ -4,3 +4,53 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   build:
     uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@v0.3
+
+  release:
+    name: Publish latest firmware
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-latest
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download firmware artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: firmware
+
+      - name: Package firmware.zip
+        run: (cd firmware && zip -r ../firmware.zip .)
+
+      - name: Compose release notes
+        run: |
+          {
+            echo "Automated build from \`main\`."
+            echo
+            echo "- **Commit:** \`$(git log -1 --format=%h)\` — $(git log -1 --format=%s)"
+            echo "- **Built:** $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo "- **Workflow run:** $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo
+            echo "Contents of \`firmware.zip\`:"
+            echo
+            for f in firmware/*; do
+              echo "- \`$(basename "$f")\`"
+            done
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Publish latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest firmware.zip \
+            --target "$GITHUB_SHA" \
+            --title "Latest firmware" \
+            --notes-file release-notes.md

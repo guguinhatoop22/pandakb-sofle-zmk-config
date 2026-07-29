@@ -2,6 +2,13 @@
 
 My ZMK configuration for the [PandaKB Sofle RGB MX](https://github.com/PandaKBLab/zmk-for-PandaKB/tree/PandaKB_Sofle) keyboard.
 
+## Download Firmware
+
+Every successful build of `main` republishes the
+[`latest` release](https://github.com/AlexandrLo/pandakb-sofle-zmk-config/releases/latest)
+with a `firmware.zip` containing all `.uf2` files. No GitHub account needed — unzip it and
+pick the file for the device you are flashing.
+
 ## Differences From Upstream PandaKB_Sofle
 
 This comparison is based on `https://github.com/PandaKBLab/zmk-for-PandaKB/tree/PandaKB_Sofle`.
