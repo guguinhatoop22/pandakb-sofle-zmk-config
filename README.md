@@ -7,8 +7,11 @@ my own layout and workflow.
 
 ## Highlights
 
-* Five layers: `Base`, `Gaming`, `Symbols`, `Editing`, `Adjust`. `Adjust` activates when
-  `Symbols` and `Editing` are both held.
+* Six layers: `Base`, `Symbols`, `Ruchey`, `Symbols*`, `Editing`, `Adjust`. `Base`/`Symbols` is
+  the English QWERTY pair; `Ruchey`/`Symbols*` types Cyrillic via AltGr/Shift combos for the
+  [Ruchey](https://github.com/a-projects/ruchey) layout. `Adjust` switches between `Base` and
+  `Ruchey`, and also activates itself whenever `Editing` is held together with either
+  `Symbols` or `Symbols*`.
 * The left encoder controls volume; the right encoder switches virtual desktops
   (`Ctrl+Alt+PageUp/PageDown`).
 * RGB underglow turns off on idle and USB disconnect so the keyboard does not keep glowing

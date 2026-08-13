@@ -38,8 +38,8 @@ There is also `config/Sofle_dongle.keymap`, a symlink to `config/Sofle.keymap` u
 
 ## Keymap Constraints
 
-- Active layers are `BASE 0`, `GAMING 1`, `SYMBOLS 2`, `EDITING 3`, `ADJUST 4`; `ADJUST` is a conditional layer when `SYMBOLS` and `EDITING` are both active.
-- `ADJUST` holds Bluetooth profile select/clear, external power toggle, RGB controls, and layer-select shortcuts (`&to GAMING`, `&to BASE`). Preserve this reachability unless the user asks otherwise.
+- Active layers are `BASE 0`, `SYMBOLS_BASE 1`, `RUCHEY 2`, `SYMBOLS_RUCHEY 3`, `EDITING 4`, `ADJUST 5`. `RUCHEY`/`SYMBOLS_RUCHEY` is the Cyrillic [Ruchey](https://github.com/a-projects/ruchey) layout (AltGr/Shift combos over the same physical keys), mirroring `BASE`/`SYMBOLS_BASE`. `ADJUST` is a conditional layer, activated when either `SYMBOLS_BASE` or `SYMBOLS_RUCHEY` is held together with `EDITING`.
+- `ADJUST` holds Bluetooth profile select/clear, external power toggle, RGB controls, and layer-select shortcuts (`&to RUCHEY`, `&to BASE`). Preserve this reachability unless the user asks otherwise.
 - Current encoders: left volume via `inc_dec_kp C_VOL_DN/C_VOL_UP` on every layer; right virtual-desktop switch via `inc_dec_kp LC(LA(PG_UP)) LC(LA(PG_DN))` on every layer except `ADJUST` (which has no sensor-bindings). Not `LC(LG(...))` (Ctrl+Meta) — that clashed with Meta-drag window moving in KWin.
 - Keep each `bindings = < ... >;` layer at the matrix-transform count in `boards/shields/Sofle/Sofle.dtsi` and preserve the matrix-shaped formatting.
 
