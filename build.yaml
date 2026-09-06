@@ -9,11 +9,15 @@ include:
   - board: nice_nano_v2
     shield: settings_reset
   - board: nice_nano_v2
-    shield: Sofle_dongle_left
+    shield: Sofle_dongle_left nice_oled
     artifact-name: Sofle_dongle_L
   - board: nice_nano_v2
-    shield: Sofle_dongle_right
+    shield: Sofle_dongle_right nice_oled
     artifact-name: Sofle_dongle_R
+  - board: nice_nano_v2
+    shield: Sofle_dongle_central
+    snippet: studio-rpc-usb-uart
+    artifact-name: Sofle_dongle
   - board: seeeduino_xiao_ble
     shield: Sofle_dongle_central prospector_adapter
     snippet: studio-rpc-usb-uart
