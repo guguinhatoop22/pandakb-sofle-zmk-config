@@ -149,6 +149,12 @@ const lv_img_dsc_t *pokemon_imgs[] = {
     &pokemon_28, &pokemon_29, &pokemon_30, &pokemon_31, &pokemon_32, &pokemon_33, &pokemon_34,
     &pokemon_35, &pokemon_36, &pokemon_37, &pokemon_38, &pokemon_39, &pokemon_40, &pokemon_41,
     &pokemon_42, &pokemon_43, &pokemon_44, &pokemon_45, &pokemon_46, &pokemon_47};
+#elif IS_ENABLED(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_LUNA)
+LV_IMG_DECLARE(dog_walk1_90);
+LV_IMG_DECLARE(dog_walk2_90);
+LV_IMG_DECLARE(dog_run1_90);
+LV_IMG_DECLARE(dog_run2_90);
+const lv_img_dsc_t *luna_anim_imgs[] = {&dog_walk1_90, &dog_walk2_90, &dog_run1_90, &dog_run2_90};
 #else
 #endif
 #else // IS_ENABLED(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL)
@@ -186,6 +192,8 @@ void draw_animation(lv_obj_t *canvas, struct zmk_widget_screen *widget) {
     lv_animimg_set_src(art, (const void **)head_imgs, 16);
 #elif IS_ENABLED(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_CAT)
     lv_animimg_set_src(art, (const void **)cat_imgs, 8);
+#elif IS_ENABLED(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_LUNA)
+    lv_animimg_set_src(art, (const void **)luna_anim_imgs, 4);
 #elif IS_ENABLED(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_SPACEMAN)
     lv_animimg_set_src(art, (const void **)spaceman_imgs, 20);
 #elif IS_ENABLED(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_POKEMON)
