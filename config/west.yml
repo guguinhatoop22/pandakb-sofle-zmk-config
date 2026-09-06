@@ -4,17 +4,12 @@ manifest:
   remotes:
     - name: zmkfirmware
       url-base: https://github.com/zmkfirmware
-    - name: mctechnology17
-      url-base: https://github.com/mctechnology17
     - name: carrefinho
       url-base: https://github.com/carrefinho
   projects:
     - name: zmk
       remote: zmkfirmware
       import: app/west.yml
-    - name: zmk-nice-oled
-      remote: mctechnology17
-      revision: main
     - name: prospector-zmk-module
       remote: carrefinho
       revision: main
