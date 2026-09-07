@@ -133,7 +133,7 @@ config NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_GEM
 
 config NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_CAT
     bool "Enable cat animation on peripheral"
-    default y
+    default n
 
 config NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_HEAD
     bool "Enable head animation on peripheral"
@@ -661,13 +661,13 @@ config NICE_OLED_WIDGET_WPM_LABEL_CUSTOM_Y
 ## LUNA WIDGET POSITION {{{
 config NICE_OLED_WIDGET_LUNA_CUSTOM_X
     int "Luna widget X position"
-    default 65 if NICE_OLED_ON # 36 for a other good position
+    default 50 if NICE_OLED_ON # centered horizontally for 32px width on 128px screen
     default 100 if NICE_EPAPER_ON
     default 100
 
 config NICE_OLED_WIDGET_LUNA_CUSTOM_Y
     int "Luna widget Y position"
-    default 0 if NICE_OLED_ON
+    default 5 if NICE_OLED_ON # centered vertically for 22px height on 32px screen
     default 15 if NICE_EPAPER_ON
     default 0
 ##}}}

@@ -57,7 +57,7 @@ if(CONFIG_ZMK_DISPLAY AND CONFIG_NICE_OLED_WIDGET_STATUS)
 
       if(CONFIG_NICE_OLED_WIDGET_WPM)
         zephyr_library_sources(widgets/wpm.c)
-        target_sources_ifdef(CONFIG_NICE_OLED_WIDGET_WPM_LUNA app PRIVATE widgets/luna.c)
+        zephyr_library_sources_ifdef(CONFIG_NICE_OLED_WIDGET_WPM_LUNA widgets/luna.c)
         target_sources_ifdef(CONFIG_NICE_OLED_WIDGET_WPM_BONGO_CAT app PRIVATE widgets/bongo_cat.c)
       endif()
 
@@ -85,7 +85,7 @@ if(CONFIG_ZMK_DISPLAY AND CONFIG_NICE_OLED_WIDGET_STATUS)
     else()
 
       if(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_WPM)
-        target_sources_ifdef(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_WPM app PRIVATE widgets/luna.c)
+        zephyr_library_sources(widgets/luna.c)
       endif()
 
       zephyr_library_sources(assets/crystal.c)

@@ -150,11 +150,11 @@ const lv_img_dsc_t *pokemon_imgs[] = {
     &pokemon_35, &pokemon_36, &pokemon_37, &pokemon_38, &pokemon_39, &pokemon_40, &pokemon_41,
     &pokemon_42, &pokemon_43, &pokemon_44, &pokemon_45, &pokemon_46, &pokemon_47};
 #elif IS_ENABLED(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_LUNA)
-LV_IMG_DECLARE(dog_walk1_90);
-LV_IMG_DECLARE(dog_walk2_90);
-LV_IMG_DECLARE(dog_run1_90);
-LV_IMG_DECLARE(dog_run2_90);
-const lv_img_dsc_t *luna_anim_imgs[] = {&dog_walk1_90, &dog_walk2_90, &dog_run1_90, &dog_run2_90};
+LV_IMG_DECLARE(dog_walk1);
+LV_IMG_DECLARE(dog_walk2);
+LV_IMG_DECLARE(dog_run1);
+LV_IMG_DECLARE(dog_run2);
+const lv_img_dsc_t *luna_anim_imgs[] = {&dog_walk1, &dog_walk2, &dog_run1, &dog_run2};
 #else
 #endif
 #else // IS_ENABLED(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL)
