@@ -108,16 +108,6 @@ config NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_WPM
     bool "Enable PERIPHERAL WPM widget compatibility"
     default n
 ##}}}
-### NICE_OLED_WIDGET_RIGHT_HUD {{{
-config NICE_OLED_WIDGET_RIGHT_HUD
-    bool "Enable Right Half HUD widget with Guguinhatop, Layer and Modifiers"
-    default n
-##}}}
-### NICE_OLED_WIDGET_REACTIVE_RGB {{{
-config NICE_OLED_WIDGET_REACTIVE_RGB
-    bool "Enable reactive RGB typing pulse"
-    default y
-##}}}
 ### NICE_OLED_WIDGET_ANIMATION_PERIPHERAL || NICE_OLED_WIDGET_STATIC_IMAGE_PERIPHERAL {{{
 config NICE_OLED_WIDGET_ANIMATION_PERIPHERAL
     bool "Enable animation on peripheral"
