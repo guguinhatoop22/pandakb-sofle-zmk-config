@@ -334,7 +334,7 @@ layers:
   - {t: '$$mdi:led-on$$', s: '$$tabler:brightness-up$$', type: sym_by_sym}
   - {t: '$$mdi:led-outline$$', s: '$$tabler:brightness-down$$', type: sym_by_sym}
   - ''
-  - OUT TOG
+  - ''
   - ''
   - ''
   - ''
