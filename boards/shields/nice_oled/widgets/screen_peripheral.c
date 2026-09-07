@@ -39,6 +39,11 @@ static struct zmk_widget_sleep_status sleep_status_widget;
 static struct zmk_widget_luna luna_widget;
 #endif
 
+#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_RIGHT_HUD)
+#include "right_hud.h"
+static struct zmk_widget_right_hud right_hud_widget;
+#endif
+
 /**
  * Draw canvas
  **/
@@ -148,7 +153,7 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
 
     sys_slist_append(&widgets, &widget->node);
 
-#if !IS_ENABLED(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_SMART_BATTERY) && !IS_ENABLED(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_WPM)
+#if !IS_ENABLED(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_SMART_BATTERY) && !IS_ENABLED(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_WPM) && !IS_ENABLED(CONFIG_NICE_OLED_WIDGET_RIGHT_HUD)
     draw_animation(canvas, widget);
 #endif
     widget_battery_status_init();
@@ -157,6 +162,11 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
 #if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_WPM)
     zmk_widget_luna_init(&luna_widget, canvas);
     lv_obj_align(zmk_widget_luna_obj(&luna_widget), LV_ALIGN_TOP_LEFT, CONFIG_NICE_OLED_WIDGET_LUNA_CUSTOM_X, CONFIG_NICE_OLED_WIDGET_LUNA_CUSTOM_Y);
+#endif
+
+#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_RIGHT_HUD)
+    zmk_widget_right_hud_init(&right_hud_widget, canvas);
+    lv_obj_align(zmk_widget_right_hud_obj(&right_hud_widget), LV_ALIGN_TOP_LEFT, 0, 0);
 #endif
 
 #if IS_ENABLED(CONFIG_NICE_OLED_SHOW_SLEEP_ART_ON_IDLE) ||                                         \
