@@ -170,6 +170,7 @@ ZMK_SUBSCRIPTION(widget_luna, zmk_wpm_state_changed);
 int zmk_widget_luna_init(struct zmk_widget_luna *widget, lv_obj_t *parent) {
     widget->obj = lv_animimg_create(parent);
     lv_obj_center(widget->obj);
+    lv_img_set_angle(widget->obj, 900);
 
     if (luna_idle_timer == NULL) {
         luna_idle_timer = lv_timer_create(luna_idle_timer_cb, 200, NULL);
