@@ -140,11 +140,12 @@ ZMK_SUBSCRIPTION(widget_peripheral_status, zmk_split_peripheral_status_changed);
 
 int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
     widget->obj = lv_obj_create(parent);
-    lv_obj_set_size(widget->obj, CANVAS_HEIGHT, CANVAS_WIDTH);
+    lv_obj_set_size(widget->obj, CANVAS_OBJ_WIDTH, CANVAS_OBJ_HEIGHT);
 
     lv_obj_t *canvas = lv_canvas_create(widget->obj);
     lv_obj_align(canvas, LV_ALIGN_TOP_LEFT, 0, 0);
-    lv_canvas_set_buffer(canvas, widget->cbuf, CANVAS_HEIGHT, CANVAS_HEIGHT, LV_IMG_CF_TRUE_COLOR);
+    lv_canvas_set_buffer(canvas, widget->cbuf, CANVAS_BUF_WIDTH, CANVAS_BUF_HEIGHT,
+                         LV_IMG_CF_TRUE_COLOR);
 
     sys_slist_append(&widgets, &widget->node);
 

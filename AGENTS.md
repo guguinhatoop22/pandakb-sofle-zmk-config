@@ -10,8 +10,9 @@ This is a ZMK user config plus a local `Sofle` shield for a PandaKB Sofle RGB MX
 - nice_nano_v2 + "Sofle_L nice_oled", snippet: studio-rpc-usb-uart, artifact-name: Sofle_L_oled
 - nice_nano_v2 + "Sofle_R nice_oled", artifact-name: Sofle_R_oled
 - nice_nano_v2 + settings_reset
-- nice_nano_v2 + Sofle_dongle_left, artifact-name: Sofle_dongle_L
-- nice_nano_v2 + Sofle_dongle_right, artifact-name: Sofle_dongle_R
+- nice_nano_v2 + "Sofle_dongle_left nice_oled", artifact-name: Sofle_dongle_L
+- nice_nano_v2 + "Sofle_dongle_right nice_oled", artifact-name: Sofle_dongle_R
+- nice_nano_v2 + "Sofle_dongle_central nice_oled", snippet: studio-rpc-usb-uart, artifact-name: Sofle_dongle
 - seeeduino_xiao_ble + "Sofle_dongle_central prospector_adapter", snippet: studio-rpc-usb-uart, artifact-name: Sofle_dongle_prospector
 - seeeduino_xiao_ble + settings_reset
 ```
@@ -50,7 +51,7 @@ There is also `config/Sofle_dongle.keymap`, a symlink to `config/Sofle.keymap` u
 - EC11 encoders are defined in shared `Sofle.dtsi` and enabled per side in `Sofle_L.overlay` / `Sofle_R.overlay`.
 - Battery reporting uses `zmk,battery-nrf-vddh` in each side overlay.
 - WS2812 RGB is on SPI in `Sofle.dtsi` with `chain-length = <36>`; be conservative with power-hungry changes on this wireless build.
-- The Prospector dongle variant (`boards/shields/Sofle_dongle/`) uses the same PCB/pin mapping as `Sofle_L`/`Sofle_R` for its left/right peripherals, but neither half is central — `Sofle_dongle_central` (built for `seeeduino_xiao_ble`, paired with the `prospector-zmk-module`'s `prospector_adapter` shield) is. Peripherals in this variant have no OLED.
+- The dongle variant (`boards/shields/Sofle_dongle/`) uses the same PCB/pin mapping as `Sofle_L`/`Sofle_R` for its left/right peripherals, but neither half is central. Two centrals exist: `nice_nano_v2` + `Sofle_dongle_central nice_oled` (horizontal SSD1306 on D2/D3, artifact `Sofle_dongle`) and `seeeduino_xiao_ble` + `Sofle_dongle_central prospector_adapter` (round LCD). The nice!nano OLED node lives in `boards/shields/Sofle_dongle/boards/Sofle_dongle_central/nice_nano_v2.overlay` so it does not attach to the Prospector build. Dongle peripherals still stack `nice_oled` (Luna on the left, Guguinhatop on the right).
 - `Sofle_dongle_central.overlay` wires an unused SPI pin to a fake `zmk,underglow` chosen node (`chain-length = <1>`, nothing physically attached) purely so `CONFIG_ZMK_RGB_UNDERGLOW` compiles on the dongle; this lets `BEHAVIOR_LOCALITY_GLOBAL` RGB behaviors (`RGB_TOG`/hue/effect) forward from the dongle to the halves' real LED strips.
 - Dongle-mode peripherals (`config/Sofle_dongle_left.conf` / `_right.conf`) run `CONFIG_ZMK_RGB_UNDERGLOW_EXT_POWER=y` (cuts the WS2812 VCC rail on `RGB_TOG` so all 36 chips stop drawing quiescent current) and ZMK's default `*_LATENCY=30` (not `0`) to conserve peripheral battery; do not change these without understanding the battery-life tradeoff.
 
@@ -61,6 +62,7 @@ Preferred local builds require a workspace that has the ZMK checkout at `zmk/app
 ```bash
 west build -s zmk/app -b nice_nano_v2 -- -DSHIELD="Sofle_L nice_oled" -DSNIPPET=studio-rpc-usb-uart -DZMK_CONFIG="$PWD/config"
 west build -s zmk/app -b nice_nano_v2 -- -DSHIELD="Sofle_R nice_oled" -DZMK_CONFIG="$PWD/config"
+west build -s zmk/app -b nice_nano_v2 -- -DSHIELD="Sofle_dongle_central nice_oled" -DSNIPPET=studio-rpc-usb-uart -DZMK_CONFIG="$PWD/config"
 ```
 
 If local ZMK dependencies are unavailable, validate by inspection: `build.yaml` still includes the intended targets, keymap/devicetree braces and semicolons are balanced, every keymap layer has the transform binding count, and `.conf` lines are valid `CONFIG_NAME=value` entries.

@@ -33,17 +33,21 @@ device, and both can coexist:
 * **Standalone (dongle-less), SSD1306 OLED** — `Sofle_L_oled` / `Sofle_R_oled`
   (`nice_nano_v2`). Each half runs `Sofle_L`/`Sofle_R`, `Sofle_L` is BLE central by default,
   and both halves show status on their OLED.
-* **[Prospector](https://github.com/carrefinho/prospector) dongle** — the dongle
-  (Seeed XIAO nRF52840 + round LCD) is the BLE central and both halves are peripherals with
-  no OLED:
-  * `Sofle_dongle_L` / `Sofle_dongle_R` — flash to each half (`nice_nano_v2`).
-  * `Sofle_dongle_prospector` — flash to the Prospector dongle (`seeeduino_xiao_ble`); shows
-    layer, battery, and connection status on its screen.
+* **Dongle** — neither half is central; flash a dongle firmware as the BLE central. Two
+  dongle boards are built:
+  * `Sofle_dongle` — `nice_nano_v2` + a horizontal SSD1306 (same 128x32 panel as the
+    halves). Wire `GND`→`GND`, `VCC`→`3V3`, `SDA`→`D2` (`P0.17`), `SCL`→`D3` (`P0.20`).
+    The screen shows host output (USB/BT + profile), the active layer, held modifiers,
+    and Luna (WPM from both halves).
+  * `Sofle_dongle_prospector` — [Prospector](https://github.com/carrefinho/prospector)
+    (Seeed XIAO nRF52840 + round LCD); shows layer, battery, and connection status.
+  * `Sofle_dongle_L` / `Sofle_dongle_R` — flash to each half (`nice_nano_v2`). Left OLED
+    is Luna; right OLED is the static Guguinhatop image.
   * A separate `settings_reset` build is provided for each board (`nice_nano_v2` and
     `seeeduino_xiao_ble`) so BLE bonds can be reset independently.
 
-  After flashing, pair the **left half first, then the right half** — the Prospector battery
-  widget orders itself by pairing order.
+  After flashing, pair the **left half first, then the right half** — battery widgets
+  that list both halves order themselves by pairing order.
 
 `config/Sofle_dongle.keymap` is a symlink to `config/Sofle.keymap`, so keymap edits apply to
 both variants automatically.
@@ -59,8 +63,9 @@ both variants automatically.
 4. Repeat per board/half:
    * Standalone: `Sofle_L_oled.uf2` → left half, `Sofle_R_oled.uf2` → right half.
    * Dongle variant: `Sofle_dongle_L.uf2` → left half, `Sofle_dongle_R.uf2` → right half,
-     `Sofle_dongle_prospector.uf2` → the Prospector dongle. Flash and power on the **left half
-     first, then the right half** so the Prospector battery widget orders itself correctly.
+     then either `Sofle_dongle.uf2` → the nice!nano + SSD1306 dongle or
+     `Sofle_dongle_prospector.uf2` → the Prospector dongle. Flash and power on the **left
+     half first, then the right half** so battery widgets order themselves correctly.
 
 To reset BLE bonds on a board, flash its `settings_reset.uf2` (same bootloader-drive process),
 let it finish rebooting once, then flash the normal firmware `.uf2` back onto it.
