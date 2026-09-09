@@ -11,6 +11,7 @@ features:
   - dongle
   - underglow
   - encoder
+  - display
 siblings:
   - Sofle_dongle_central
   - Sofle_dongle_left

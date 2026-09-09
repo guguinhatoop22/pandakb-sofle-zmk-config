@@ -7,6 +7,23 @@
 #define CANVAS_WIDTH CONFIG_NICE_OLED_CUSTOM_CANVAS_WIDTH
 #define CANVAS_HEIGHT CONFIG_NICE_OLED_CUSTOM_CANVAS_HEIGHT
 
+#if IS_ENABLED(CONFIG_NICE_OLED_LANDSCAPE)
+// The canvas already matches the panel, so it is used as-is.
+#define CANVAS_BUF_WIDTH CANVAS_WIDTH
+#define CANVAS_BUF_HEIGHT CANVAS_HEIGHT
+#define CANVAS_OBJ_WIDTH CANVAS_WIDTH
+#define CANVAS_OBJ_HEIGHT CANVAS_HEIGHT
+#else
+// rotate_canvas() turns the canvas 90 degrees in place, so the buffer has to be
+// square to hold both orientations, while the container ends up transposed.
+#define CANVAS_BUF_WIDTH CANVAS_HEIGHT
+#define CANVAS_BUF_HEIGHT CANVAS_HEIGHT
+#define CANVAS_OBJ_WIDTH CANVAS_HEIGHT
+#define CANVAS_OBJ_HEIGHT CANVAS_WIDTH
+#endif
+
+#define CANVAS_BUF_SIZE (CANVAS_BUF_WIDTH * CANVAS_BUF_HEIGHT)
+
 #define LVGL_BACKGROUND                                                                            \
     IS_ENABLED(CONFIG_NICE_OLED_WIDGET_INVERTED) ? lv_color_black() : lv_color_white()
 #define LVGL_FOREGROUND                                                                            \

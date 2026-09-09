@@ -1,5 +1,6 @@
 #include "util.h"
 #include <ctype.h>
+#include <string.h>
 #include <zephyr/kernel.h>
 
 void to_uppercase(char *str) {
@@ -9,18 +10,23 @@ void to_uppercase(char *str) {
 }
 
 void rotate_canvas(lv_obj_t *canvas, lv_color_t cbuf[]) {
-  static lv_color_t cbuf_tmp[CANVAS_HEIGHT * CANVAS_HEIGHT];
+#if IS_ENABLED(CONFIG_NICE_OLED_LANDSCAPE)
+  ARG_UNUSED(canvas);
+  ARG_UNUSED(cbuf);
+#else
+  static lv_color_t cbuf_tmp[CANVAS_BUF_SIZE];
   memcpy(cbuf_tmp, cbuf, sizeof(cbuf_tmp));
 
   lv_img_dsc_t img;
   img.data = (void *)cbuf_tmp;
   img.header.cf = LV_IMG_CF_TRUE_COLOR;
-  img.header.w = CANVAS_HEIGHT;
-  img.header.h = CANVAS_HEIGHT;
+  img.header.w = CANVAS_BUF_WIDTH;
+  img.header.h = CANVAS_BUF_HEIGHT;
 
   lv_canvas_fill_bg(canvas, LVGL_BACKGROUND, LV_OPA_COVER);
   lv_canvas_transform(canvas, &img, 900, LV_IMG_ZOOM_NONE, -1, 0,
-                      CANVAS_HEIGHT / 2, CANVAS_HEIGHT / 2, false);
+                      CANVAS_BUF_WIDTH / 2, CANVAS_BUF_HEIGHT / 2, false);
+#endif
 }
 
 void draw_background(lv_obj_t *canvas) {

@@ -20,6 +20,18 @@ config NICE_OLED_CUSTOM_CANVAS_HEIGHT
     int "Custom Canvas Height"
     default 160
 
+config NICE_OLED_LANDSCAPE
+    bool "Draw the canvas in landscape instead of rotating it"
+    default n
+    help
+      By default the canvas is drawn in portrait and rotated 90 degrees on every
+      redraw, which assumes the panel is mounted turned sideways so the two
+      cancel out. Enable this when the panel is mounted the same way it is
+      addressed (a 128x32 SSD1306 read as 128 wide, 32 tall) and set
+      NICE_OLED_CUSTOM_CANVAS_WIDTH/HEIGHT to the panel's real dimensions.
+      Every widget X/Y then addresses panel pixels directly, and the square
+      rotation buffer is no longer allocated.
+
 config LV_Z_VDB_SIZE
     default 64 if NICE_OLED_ON
     default 100 if NICE_EPAPER_ON

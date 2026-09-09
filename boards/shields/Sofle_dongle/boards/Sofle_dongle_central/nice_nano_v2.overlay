@@ -1,0 +1,63 @@
+/*
+ * Horizontal SSD1306 on the nice!nano dongle (Sofle_dongle_central).
+ *
+ * Kept out of Sofle_dongle_central.overlay so the Seeed XIAO + Prospector
+ * build does not gain a second zephyr,display node.
+ *
+ * Wiring (same I2C pins as the Sofle halves):
+ *   SSD1306 GND -> nice!nano GND
+ *   SSD1306 VCC -> nice!nano 3V3
+ *   SSD1306 SDA -> nice!nano D2 (P0.17)
+ *   SSD1306 SCL -> nice!nano D3 (P0.20)
+ */
+
+&pinctrl {
+    i2c0_default: i2c0_default {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 17)>,
+                    <NRF_PSEL(TWIM_SCL, 0, 20)>;
+        };
+    };
+
+    i2c0_sleep: i2c0_sleep {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 17)>,
+                    <NRF_PSEL(TWIM_SCL, 0, 20)>;
+            low-power-enable;
+        };
+    };
+};
+
+&pro_micro_i2c {
+    status = "okay";
+
+    oled: ssd1306@3c {
+        compatible = "solomon,ssd1306fb";
+        reg = <0x3c>;
+        width = <128>;
+        height = <32>;
+        segment-offset = <0>;
+        page-offset = <0>;
+        display-offset = <0>;
+        multiplex-ratio = <31>;
+        segment-remap;
+        com-invdir;
+        com-sequential;
+        inversion-on;
+        prechargep = <0x22>;
+    };
+};
+
+/ {
+    chosen {
+        zephyr,display = &oled;
+        zmk,battery = &vbatt;
+    };
+
+    /* USB-powered dongle; the node exists so nice_oled's battery listeners
+     * link. The screen shows the halves' levels, not this reading.
+     */
+    vbatt: vbatt {
+        compatible = "zmk,battery-nrf-vddh";
+    };
+};
