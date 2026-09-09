@@ -19,7 +19,7 @@ my own layout and workflow.
 
 ## Download Firmware
 
-**[⬇ Download the latest firmware.zip](https://github.com/AlexandrLo/pandakb-sofle-zmk-config/releases/latest)**
+**[⬇ Download the latest firmware.zip](https://github.com/guguinhatoop22/pandakb-sofle-zmk-config/releases/latest)**
 
 Every successful build of `main` republishes this rolling `latest` release with a
 `firmware.zip` containing all `.uf2` files. No GitHub account needed — unzip it and pick the
@@ -31,18 +31,18 @@ Two independent build variants live in this repo; you choose which firmware to f
 device, and both can coexist:
 
 * **Standalone (dongle-less), SSD1306 OLED** — `Sofle_L_oled` / `Sofle_R_oled`
-  (`nice_nano_v2`). Each half runs `Sofle_L`/`Sofle_R`, `Sofle_L` is BLE central by default,
-  and both halves show status on their OLED.
+  (`nice_nano_v2`). Each half runs `Sofle_L`/`Sofle_R`, `Sofle_L` is BLE central by default.
+  The left OLED shows WPM Graph and status indicators; the right OLED shows Guguinhatop.
 * **Dongle** — neither half is central; flash a dongle firmware as the BLE central. Two
   dongle boards are built:
   * `Sofle_dongle` — `nice_nano_v2` + a horizontal SSD1306 (same 128x32 panel as the
     halves). Wire `GND`→`GND`, `VCC`→`3V3`, `SDA`→`D2` (`P0.17`), `SCL`→`D3` (`P0.20`).
     The screen shows host output (USB/BT + profile), the active layer, held modifiers,
-    and Luna (WPM from both halves).
+    and Luna running horizontally (WPM from both halves).
   * `Sofle_dongle_prospector` — [Prospector](https://github.com/carrefinho/prospector)
     (Seeed XIAO nRF52840 + round LCD); shows layer, battery, and connection status.
   * `Sofle_dongle_L` / `Sofle_dongle_R` — flash to each half (`nice_nano_v2`). Left OLED
-    is Luna; right OLED is the static Guguinhatop image.
+    is an animated Pokémon; right OLED is the static Guguinhatop image.
   * A separate `settings_reset` build is provided for each board (`nice_nano_v2` and
     `seeeduino_xiao_ble`) so BLE bonds can be reset independently.
 
@@ -54,7 +54,7 @@ both variants automatically.
 
 ## Flashing
 
-1. Download and unzip `firmware.zip` from the [`latest` release](https://github.com/AlexandrLo/pandakb-sofle-zmk-config/releases/latest).
+1. Download and unzip `firmware.zip` from the [`latest` release](https://github.com/guguinhatoop22/pandakb-sofle-zmk-config/releases/latest).
 2. Put the target board into bootloader mode by double-tapping its reset button. It shows up
    on your computer as a USB mass storage drive (`NICENANO` for `nice_nano_v2`, `XIAO-SENSE`
    for `seeeduino_xiao_ble`).
