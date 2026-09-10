@@ -124,15 +124,21 @@ static bool underglow_tick_paused = false;
 
 static void pause_underglow_tick(void) {
     if (!underglow_tick_paused) {
-        k_timer_stop(&underglow_tick);
-        underglow_tick_paused = true;
+        bool is_on = false;
+        if (zmk_rgb_underglow_get_state(&is_on) == 0 && is_on) {
+            k_timer_stop(&underglow_tick);
+            underglow_tick_paused = true;
+        }
     }
 }
 
 static void resume_underglow_tick(void) {
     if (underglow_tick_paused) {
-        /* Preserve the exact native 50 ms period from ZMK v0.3 (K_MSEC(50)) */
-        k_timer_start(&underglow_tick, K_NO_WAIT, K_MSEC(ZMK_UNDERGLOW_TICK_PERIOD_MS));
+        bool is_on = false;
+        if (zmk_rgb_underglow_get_state(&is_on) == 0 && is_on) {
+            /* Preserve the exact native 50 ms period from ZMK v0.3 (K_MSEC(50)) */
+            k_timer_start(&underglow_tick, K_NO_WAIT, K_MSEC(ZMK_UNDERGLOW_TICK_PERIOD_MS));
+        }
         underglow_tick_paused = false;
     }
 }
@@ -248,7 +254,7 @@ static void ripple_work_handler(struct k_work *work) {
     if (zmk_rgb_underglow_get_state(&is_on) != 0 || !is_on) {
         /* User turned off RGB during ripple */
         ripple_active = false;
-        underglow_tick_paused = false;
+        resume_underglow_tick();
         for (int i = 0; i < 36; i++) {
             pixels[i] = (struct led_rgb){ .r = 0, .g = 0, .b = 0 };
         }
