@@ -102,5 +102,15 @@ if(CONFIG_ZMK_DISPLAY AND CONFIG_NICE_OLED_WIDGET_STATUS)
 
     if(CONFIG_ZMK_RGB_UNDERGLOW AND CONFIG_NICE_OLED_WIDGET_REACTIVE_RIPPLE)
       zephyr_library_sources(widgets/ripple_rgb.c)
+      zephyr_ld_options(
+        -Wl,--wrap=zmk_rgb_underglow_calc_effect
+        -Wl,--wrap=zmk_rgb_underglow_select_effect
+        -Wl,--wrap=zmk_rgb_underglow_cycle_effect
+        -Wl,--wrap=zmk_rgb_underglow_on
+        -Wl,--wrap=zmk_rgb_underglow_off
+      )
+      if(CONFIG_ZMK_SPLIT AND NOT CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+        zephyr_ld_options(-Wl,--wrap=zmk_split_transport_peripheral_command_handler)
+      endif()
     endif()
 endif()

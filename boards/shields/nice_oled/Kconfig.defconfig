@@ -127,6 +127,13 @@ config NICE_OLED_WIDGET_REACTIVE_RIPPLE
 
 if NICE_OLED_WIDGET_REACTIVE_RIPPLE
 
+config NICE_OLED_RIPPLE_HUE
+    int "Reactive ripple wave base hue (0-359)"
+    default 240
+    range 0 359
+    help
+      HSV/HSB Hue value for the reactive ripple RGB wave (0=red, 60=yellow, 120=green, 180=cyan, 240=blue, 300=magenta).
+
 config NICE_OLED_RIPPLE_PEAK_BRIGHTNESS
     int "Peak brightness percentage for ripple wave (0-100)"
     default 35
