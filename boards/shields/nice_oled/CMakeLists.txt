@@ -99,4 +99,8 @@ if(CONFIG_ZMK_DISPLAY AND CONFIG_NICE_OLED_WIDGET_STATUS)
       zephyr_library_sources(widgets/animation.c)
       zephyr_library_sources(widgets/screen_peripheral.c)
     endif()
+
+    if(CONFIG_ZMK_RGB_UNDERGLOW AND CONFIG_NICE_OLED_WIDGET_REACTIVE_RIPPLE)
+      zephyr_library_sources(widgets/ripple_rgb.c)
+    endif()
 endif()
