@@ -120,6 +120,31 @@ config NICE_OLED_WIDGET_ANIMATION_PERIPHERAL_WPM
     bool "Enable PERIPHERAL WPM widget compatibility"
     default n
 ##}}}
+### NICE_OLED_WIDGET_REACTIVE_RIPPLE {{{
+config NICE_OLED_WIDGET_REACTIVE_RIPPLE
+    bool "Enable reactive RGB typing ripple wave"
+    default n
+
+if NICE_OLED_WIDGET_REACTIVE_RIPPLE
+
+config NICE_OLED_RIPPLE_PEAK_BRIGHTNESS
+    int "Peak brightness percentage for ripple wave (0-100)"
+    default 35
+
+config NICE_OLED_RIPPLE_DURATION_MS
+    int "Duration of ripple wave in milliseconds"
+    default 320
+
+config NICE_OLED_RIPPLE_FPS
+    int "Frames per second for ripple wave animation"
+    default 30
+
+config NICE_OLED_RIPPLE_HUE_STEP
+    int "Hue advance step in degrees per keypress (0-360)"
+    default 15
+
+endif # NICE_OLED_WIDGET_REACTIVE_RIPPLE
+##}}}
 ### NICE_OLED_WIDGET_ANIMATION_PERIPHERAL || NICE_OLED_WIDGET_STATIC_IMAGE_PERIPHERAL {{{
 config NICE_OLED_WIDGET_ANIMATION_PERIPHERAL
     bool "Enable animation on peripheral"
