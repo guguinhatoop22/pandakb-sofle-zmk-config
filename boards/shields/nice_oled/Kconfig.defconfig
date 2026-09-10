@@ -133,11 +133,11 @@ config NICE_OLED_RIPPLE_PEAK_BRIGHTNESS
 
 config NICE_OLED_RIPPLE_DURATION_MS
     int "Duration of ripple wave in milliseconds"
-    default 320
+    default 800
 
 config NICE_OLED_RIPPLE_FPS
     int "Frames per second for ripple wave animation"
-    default 30
+    default 25
 
 config NICE_OLED_RIPPLE_HUE_STEP
     int "Hue advance step in degrees per keypress (0-360)"
