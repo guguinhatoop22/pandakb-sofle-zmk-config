@@ -56,7 +56,7 @@ static bool s_peripheral_stub_enabled = false;
 static int stub_central_send_command(uint8_t source, struct zmk_split_transport_central_command cmd) {
     ARG_UNUSED(source);
     ARG_UNUSED(cmd);
-    return 0;
+    return -ENODEV;
 }
 
 static int stub_central_get_available_source_ids(uint8_t *sources) {
