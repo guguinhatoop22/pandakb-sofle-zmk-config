@@ -108,6 +108,7 @@ if(CONFIG_ZMK_DISPLAY AND CONFIG_NICE_OLED_WIDGET_STATUS)
         -Wl,--wrap=zmk_rgb_underglow_cycle_effect
         -Wl,--wrap=zmk_rgb_underglow_on
         -Wl,--wrap=zmk_rgb_underglow_off
+        -Wl,--wrap=zmk_rgb_underglow_change_spd
       )
       if(CONFIG_ZMK_SPLIT AND NOT CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
         zephyr_ld_options(-Wl,--wrap=zmk_split_transport_peripheral_command_handler)

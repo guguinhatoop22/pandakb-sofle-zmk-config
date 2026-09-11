@@ -32,10 +32,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #define STRIP_CHOSEN DT_CHOSEN(zmk_underglow)
 #define NUM_LEDS DT_PROP(STRIP_CHOSEN, chain_length)
 
-#ifndef CONFIG_NICE_OLED_RIPPLE_HUE
-#define CONFIG_NICE_OLED_RIPPLE_HUE 240
-#endif
-
 #ifndef CONFIG_NICE_OLED_RIPPLE_PEAK_BRIGHTNESS
 #define CONFIG_NICE_OLED_RIPPLE_PEAK_BRIGHTNESS 35
 #endif
@@ -143,13 +139,23 @@ static void ripple_work_handler(struct k_work *work);
 static K_WORK_DELAYABLE_DEFINE(s_ripple_work, ripple_work_handler);
 
 static volatile int s_extended_effect = 0;
-static volatile uint16_t s_ripple_hue = CONFIG_NICE_OLED_RIPPLE_HUE;
 static volatile int8_t s_ripple_origin_sw = -1;
 static volatile uint32_t s_ripple_start_time = 0;
 static volatile bool s_ripple_active = false;
 static volatile uint16_t s_local_event_counter = 0;
 static volatile uint32_t s_last_handled_event_key = 0;
 static bool s_underglow_tick_paused = false;
+
+/*
+ * Transient local mirror of ZMK native state.animation_speed [1..5].
+ * Upstream ZMK v0.3 does not export a public getter for animation_speed, so
+ * __wrap_zmk_rgb_underglow_change_spd observes native speed changes to keep
+ * this mirror synchronized. It is not an independent or persistent setting.
+ */
+#ifndef CONFIG_ZMK_RGB_UNDERGLOW_SPD_START
+#define CONFIG_ZMK_RGB_UNDERGLOW_SPD_START 1
+#endif
+static volatile uint8_t s_current_speed = CONFIG_ZMK_RGB_UNDERGLOW_SPD_START;
 
 extern struct k_timer underglow_tick;
 
@@ -158,6 +164,7 @@ extern int __real_zmk_rgb_underglow_select_effect(int effect);
 extern int __real_zmk_rgb_underglow_cycle_effect(int direction);
 extern int __real_zmk_rgb_underglow_on(void);
 extern int __real_zmk_rgb_underglow_off(void);
+extern int __real_zmk_rgb_underglow_change_spd(int direction);
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT) && !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 extern int __real_zmk_split_transport_peripheral_command_handler(
@@ -224,7 +231,7 @@ static struct led_rgb hsb_to_rgb(uint16_t h, uint8_t s, uint8_t v) {
     return (struct led_rgb){ .r = r, .g = g, .b = b };
 }
 
-static void ripple_trigger_wave(uint8_t global_sw_id, uint16_t hue, uint16_t event_id) {
+static void ripple_trigger_wave(uint8_t global_sw_id, uint16_t event_id) {
     if (global_sw_id >= 60) {
         return;
     }
@@ -235,7 +242,6 @@ static void ripple_trigger_wave(uint8_t global_sw_id, uint16_t hue, uint16_t eve
     s_last_handled_event_key = event_key;
     s_ripple_origin_sw = (int8_t)global_sw_id;
     s_ripple_start_time = k_uptime_get_32();
-    s_ripple_hue = hue;
     s_ripple_active = true;
     k_work_reschedule(&s_ripple_work, K_NO_WAIT);
 }
@@ -281,6 +287,22 @@ int __wrap_zmk_rgb_underglow_off(void) {
     return __real_zmk_rgb_underglow_off();
 }
 
+int __wrap_zmk_rgb_underglow_change_spd(int direction) {
+    int ret = __real_zmk_rgb_underglow_change_spd(direction);
+    if (s_current_speed == 1 && direction < 0) {
+        /* clamped at 1 by ZMK native logic */
+    } else {
+        s_current_speed += direction;
+        if (s_current_speed > 5) {
+            s_current_speed = 5;
+        }
+        if (s_current_speed < 1) {
+            s_current_speed = 1;
+        }
+    }
+    return ret;
+}
+
 #if IS_ENABLED(CONFIG_ZMK_SPLIT) && !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 int __wrap_zmk_split_transport_peripheral_command_handler(
     const struct zmk_split_transport_peripheral *transport,
@@ -288,9 +310,8 @@ int __wrap_zmk_split_transport_peripheral_command_handler(
     if (cmd.type == ZMK_SPLIT_TRANSPORT_CENTRAL_CMD_TYPE_INVOKE_BEHAVIOR &&
         strncmp(cmd.data.invoke_behavior.behavior_dev, "ripple", 6) == 0) {
         uint8_t origin_sw = (uint8_t)cmd.data.invoke_behavior.param1;
-        uint16_t event_id = (uint16_t)(cmd.data.invoke_behavior.param2 >> 16);
-        uint16_t hue = (uint16_t)(cmd.data.invoke_behavior.param2 & 0xFFFF);
-        ripple_trigger_wave(origin_sw, hue, event_id);
+        uint16_t event_id = (uint16_t)(cmd.data.invoke_behavior.param2 & 0xFFFF);
+        ripple_trigger_wave(origin_sw, event_id);
         return 0;
     }
     return __real_zmk_split_transport_peripheral_command_handler(transport, cmd);
@@ -317,9 +338,32 @@ static void ripple_work_handler(struct k_work *work) {
         return;
     }
 
+    /* Query native ZMK Underglow state as single source of truth for color */
+    struct zmk_led_hsb hsb = zmk_rgb_underglow_calc_hue(0);
+    uint16_t hue = hsb.h;
+    uint8_t sat = hsb.s;
+    uint8_t brt = hsb.b;
+
+    /*
+     * Speed physical mapping:
+     * Specific mapping for Ripple: native ZMK effects increase their animation rate
+     * proportionally with animation_speed (1..5).
+     * Baseline: S = 1 -> duration = 800 ms (v0 = 350 mm / 800 ms = 0.4375 mm/ms)
+     * For S in [1..5]: physical_speed(S) = v0 * (1 + (S - 1) * 0.5)
+     * duration(S) = 350 / physical_speed(S) = 1600 / (S + 1) ms
+     *   S=1: 800 ms
+     *   S=2: 533 ms
+     *   S=3: 400 ms
+     *   S=4: 320 ms
+     *   S=5: 267 ms
+     */
+    uint8_t spd = s_current_speed;
+    if (spd < 1) spd = 1;
+    if (spd > 5) spd = 5;
+    uint32_t duration = 1600 / (spd + 1);
+
     uint32_t now = k_uptime_get_32();
     uint32_t elapsed = now - s_ripple_start_time;
-    uint32_t duration = CONFIG_NICE_OLED_RIPPLE_DURATION_MS;
 
     if (elapsed >= duration) {
         s_ripple_active = false;
@@ -343,11 +387,17 @@ static void ripple_work_handler(struct k_work *work) {
 
     const uint16_t *dists = cross_dist[table_row];
 
-    /* Wave reaches 350 mm max radius across full keyboard in duration (800 ms) */
+    /* Wave reaches 350 mm max radius across full keyboard in duration */
     uint32_t wave_r = (elapsed * 350) / duration;
     uint32_t wave_width = 28; /* 28 mm wave crest width */
     uint32_t fade = duration - elapsed;
-    uint16_t hue = s_ripple_hue;
+
+    /* Peak brightness scaled by native global brightness:
+     * At brt = 100%, peak = 35%.
+     * At brt = 50%, peak = 17.5%.
+     * Never exceeds original 35% limit.
+     */
+    uint32_t peak_limit = (35 * brt) / 100;
 
     for (int i = 0; i < 36; i++) {
         uint32_t d = dists[i];
@@ -355,12 +405,12 @@ static void ripple_work_handler(struct k_work *work) {
 
         if (diff < wave_width) {
             uint32_t pulse = wave_width - diff;
-            uint32_t brt = (CONFIG_NICE_OLED_RIPPLE_PEAK_BRIGHTNESS * pulse * fade) /
-                           (wave_width * duration);
-            if (brt > CONFIG_NICE_OLED_RIPPLE_PEAK_BRIGHTNESS) {
-                brt = CONFIG_NICE_OLED_RIPPLE_PEAK_BRIGHTNESS;
+            uint32_t led_brt = (peak_limit * pulse * fade) /
+                               (wave_width * duration);
+            if (led_brt > peak_limit) {
+                led_brt = peak_limit;
             }
-            s_pixels[i] = hsb_to_rgb(hue, 100, brt);
+            s_pixels[i] = hsb_to_rgb(hue, sat, (uint8_t)led_brt);
         } else {
             s_pixels[i] = (struct led_rgb){ .r = 0, .g = 0, .b = 0 };
         }
@@ -400,17 +450,16 @@ static int ripple_listener(const zmk_event_t *eh) {
         }
 
         uint16_t event_id = ++s_local_event_counter;
-        uint16_t hue = s_ripple_hue;
 
         /* Trigger wave on local half */
-        ripple_trigger_wave((uint8_t)global_sw_id, hue, event_id);
+        ripple_trigger_wave((uint8_t)global_sw_id, event_id);
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT) && IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-        /* Central forwards compact ripple event (8 bytes) to connected peripheral(s) */
+        /* Central forwards compact ripple event (param1: switch, param2: event_id) to connected peripheral(s) */
         struct zmk_behavior_binding sync_bind = {
             .behavior_dev = "ripple",
             .param1 = (uint32_t)global_sw_id,
-            .param2 = ((uint32_t)event_id << 16) | (uint32_t)hue,
+            .param2 = (uint32_t)event_id,
         };
         struct zmk_behavior_binding_event sync_ev = {
             .position = ev->position,
@@ -449,7 +498,8 @@ void ripple_rgb_init_widget(void) {
 
 uint16_t ripple_rgb_get_hue(void) {
 #if DT_HAS_CHOSEN(zmk_underglow)
-    return s_ripple_hue;
+    struct zmk_led_hsb hsb = zmk_rgb_underglow_calc_hue(0);
+    return hsb.h;
 #else
     return 0;
 #endif
@@ -457,14 +507,14 @@ uint16_t ripple_rgb_get_hue(void) {
 
 void ripple_rgb_set_hue(uint16_t hue) {
 #if DT_HAS_CHOSEN(zmk_underglow)
-    s_ripple_hue = hue % 360;
+    struct zmk_led_hsb hsb = zmk_rgb_underglow_calc_hue(0);
+    hsb.h = hue % 360;
+    zmk_rgb_underglow_set_hsb(hsb);
 #endif
 }
 
 void ripple_rgb_change_hue(int direction) {
 #if DT_HAS_CHOSEN(zmk_underglow)
-    int new_hue = (int)s_ripple_hue + (direction * 15);
-    while (new_hue < 0) new_hue += 360;
-    s_ripple_hue = (uint16_t)(new_hue % 360);
+    zmk_rgb_underglow_change_hue(direction);
 #endif
 }
