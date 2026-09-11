@@ -1,0 +1,45 @@
+# Copyright (c) 2026 guguinhatoop22
+# SPDX-License-Identifier: MIT
+
+menuconfig ZMK_RIPPLE_RGB
+	bool "Reactive RGB typing ripple (Underglow effect)"
+	depends on ZMK_RGB_UNDERGLOW
+	help
+	  Adds a 5th Underglow effect (Solid / Breathe / Spectrum / Ripple).
+	  When Ripple is selected, LEDs stay dark until a key press; a wave
+	  then expands from that switch using physical PCB distances.
+	  On splits, only a compact key+event payload is sent over BLE; each
+	  half renders locally.
+
+if ZMK_RIPPLE_RGB
+
+config ZMK_RIPPLE_RGB_PEAK_BRIGHTNESS
+	int "Peak ripple brightness percent (relative to underglow brightness)"
+	range 5 100
+	default 35
+	help
+	  Caps the ripple crest as a percentage of the current Underglow
+	  brightness. Lower values reduce eye strain and brownouts.
+
+config ZMK_RIPPLE_RGB_DURATION_MS
+	int "Legacy duration hint (ms); speed still follows Underglow SPI/SPD"
+	range 100 5000
+	default 800
+	help
+	  Reserved for future use / documentation. Live wave duration is
+	  driven by native Underglow animation_speed: duration_ms = 1600/(S+1).
+
+config ZMK_RIPPLE_RGB_FPS
+	int "Ripple render frames per second"
+	range 10 60
+	default 25
+
+endif # ZMK_RIPPLE_RGB
+
+# Back-compat: older Sofle configs enabled the effect under this name.
+config NICE_OLED_WIDGET_REACTIVE_RIPPLE
+	bool "Deprecated alias for ZMK_RIPPLE_RGB"
+	select ZMK_RIPPLE_RGB
+	depends on ZMK_RGB_UNDERGLOW
+	help
+	  Prefer CONFIG_ZMK_RIPPLE_RGB=y. Kept so existing .conf files keep working.
