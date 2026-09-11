@@ -157,6 +157,45 @@ static bool s_underglow_tick_paused = false;
 #endif
 static volatile uint8_t s_current_speed = CONFIG_ZMK_RGB_UNDERGLOW_SPD_START;
 
+#if IS_ENABLED(CONFIG_SETTINGS)
+#include <zephyr/settings/settings.h>
+
+static int sync_speed_from_settings_cb(const char *key, size_t len, settings_read_cb read_cb,
+                                       void *cb_arg, void *param) {
+    const char *next;
+    if (settings_name_steq(key, "state", &next) && !next) {
+        /* Layout of ZMK struct rgb_underglow_state in zmk_v03_rgb_underglow.c:
+         * struct zmk_led_hsb color; // 4 bytes (offset 0: h 2B, s 1B, b 1B)
+         * uint8_t animation_speed;   // 1 byte  (offset 4)
+         */
+        struct {
+            struct zmk_led_hsb color;
+            uint8_t animation_speed;
+        } __packed saved;
+
+        if (len >= sizeof(saved)) {
+            if (read_cb(cb_arg, &saved, sizeof(saved)) >= 0) {
+                if (saved.animation_speed >= 1 && saved.animation_speed <= 5) {
+                    s_current_speed = saved.animation_speed;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+static void sync_speed_from_native_settings(void) {
+    settings_load_subtree_direct("rgb/underglow", sync_speed_from_settings_cb, NULL);
+}
+
+static int ripple_settings_commit(void) {
+    sync_speed_from_native_settings();
+    return 0;
+}
+
+SETTINGS_STATIC_HANDLER_DEFINE(ripple_speed_sync, "ripple_speed_sync", NULL, NULL, ripple_settings_commit, NULL);
+#endif
+
 extern struct k_timer underglow_tick;
 
 extern int __real_zmk_rgb_underglow_calc_effect(int direction);
@@ -337,6 +376,14 @@ static void ripple_work_handler(struct k_work *work) {
         s_ripple_active = false;
         return;
     }
+
+#if IS_ENABLED(CONFIG_SETTINGS)
+    static bool s_speed_boot_checked = false;
+    if (!s_speed_boot_checked) {
+        s_speed_boot_checked = true;
+        sync_speed_from_native_settings();
+    }
+#endif
 
     /* Query native ZMK Underglow state as single source of truth for color */
     struct zmk_led_hsb hsb = zmk_rgb_underglow_calc_hue(0);
