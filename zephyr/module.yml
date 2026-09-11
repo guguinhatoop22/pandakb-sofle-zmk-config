@@ -1,3 +1,6 @@
+name: pandakb_sofle
 build:
+  cmake: .
+  kconfig: Kconfig
   settings:
     board_root: .

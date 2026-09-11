@@ -1,4 +1,4 @@
-if SHIELD_SOFLE_L
+if SHIELD_SOFLE_L || SHIELD_SOFLE_HYBRID_L
 
 config ZMK_KEYBOARD_NAME
     default "Sofle"
@@ -8,7 +8,7 @@ config ZMK_SPLIT_ROLE_CENTRAL
 
 endif
 
-if SHIELD_SOFLE_L || SHIELD_SOFLE_R
+if SHIELD_SOFLE_L || SHIELD_SOFLE_R || SHIELD_SOFLE_HYBRID_L
 
 config ZMK_SPLIT
     default y

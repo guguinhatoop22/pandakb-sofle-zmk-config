@@ -1,0 +1,31 @@
+# Copyright (c) 2026 guguinhatoop22
+# SPDX-License-Identifier: MIT
+
+menuconfig SOFLE_DUAL_ROLE
+    bool "Sofle dual role (central + peripheral na mesma imagem)"
+    depends on ZMK_SPLIT && ZMK_SPLIT_BLE && ZMK_SPLIT_ROLE_CENTRAL
+    default n
+
+if SOFLE_DUAL_ROLE
+# Símbolos que o upstream esconde atrás de `if !ZMK_SPLIT_ROLE_CENTRAL`.
+# Kconfig faz OR das dependências de definições múltiplas, então redeclarar aqui os libera.
+config ZMK_SPLIT_BLE_PERIPHERAL_STACK_SIZE
+    int
+    default 756
+config ZMK_SPLIT_BLE_PERIPHERAL_PRIORITY
+    int
+    default 5
+config ZMK_SPLIT_BLE_PERIPHERAL_POSITION_QUEUE_SIZE
+    int
+    default 10
+config BT_PERIPHERAL
+    default y
+config SOFLE_DUAL_ROLE_PROMOTE_DELAY_MS
+    int "Tempo sem central conectado antes de assumir o papel de central"
+    default 6000
+endif
+
+config SOFLE_SPLIT_PERIPHERAL_OPEN_ADV
+    bool "Peripheral sempre anuncia undirected (aceita dongle e Left)"
+    depends on ZMK_SPLIT && ZMK_SPLIT_BLE && !ZMK_SPLIT_ROLE_CENTRAL
+    default n
