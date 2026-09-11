@@ -22,7 +22,10 @@ if(CONFIG_SOFLE_DUAL_ROLE)
   )
   target_include_directories(app PRIVATE ${ZMK_APP}/include ${ZMK_APP}/src/split/bluetooth)
 
-  zephyr_ld_options(-Wl,--wrap=bt_le_adv_start -Wl,--wrap=bt_conn_auth_info_cb_register -Wl,--wrap=bt_conn_auth_cb_register)
+  # Also wrap bt_foreach_bond so hybrid Left open-advertises as split peripheral
+  # (otherwise it directed-advertises to the last bond, e.g. a phone, and the
+  # dongle never auto-reconnects after a USB session).
+  zephyr_ld_options(-Wl,--wrap=bt_le_adv_start -Wl,--wrap=bt_conn_auth_info_cb_register -Wl,--wrap=bt_conn_auth_cb_register -Wl,--wrap=bt_foreach_bond)
 endif()
 
 if(CONFIG_SOFLE_SPLIT_PERIPHERAL_OPEN_ADV)

@@ -46,6 +46,9 @@ static zmk_split_transport_peripheral_status_changed_cb_t s_peripheral_status_cb
 
 static bool s_central_stub_enabled = false;
 static bool s_peripheral_stub_enabled = false;
+/* When true, peripheral stub briefly claims "available" so ZMK tears down and
+ * re-selects bt_peripheral (used to re-arm split advertising after demotion). */
+static bool s_kick_peripheral = false;
 
 /* Stub Central:
  * When in PERIPHERAL mode (dongle mode): available = true.
@@ -110,7 +113,7 @@ static int stub_peripheral_set_enabled(bool en) {
 
 static struct zmk_split_transport_status stub_peripheral_get_status(void) {
     return (struct zmk_split_transport_status){
-        .available = (s_mode == DUAL_ROLE_MODE_CENTRAL),
+        .available = (s_mode == DUAL_ROLE_MODE_CENTRAL) || s_kick_peripheral,
         .enabled = s_peripheral_stub_enabled,
         .connections = ZMK_SPLIT_TRANSPORT_CONNECTIONS_STATUS_DISCONNECTED,
     };
@@ -139,7 +142,31 @@ static void count_le_conns_cb(struct bt_conn *conn, void *data) {
     (*count)++;
 }
 
+/* Drop every LE connection. Used on mode changes so a leftover host-HID or
+ * split link cannot keep the controller busy and block the next role's
+ * advertising/scanning (this was the field failure: after USB demotion the
+ * host HID advert from ble.c was still active, so split adv never restarted
+ * and the dongle could not reconnect; the phone kept seeing the Left). */
+static void disconnect_le_conn_cb(struct bt_conn *conn, void *data) {
+    ARG_UNUSED(data);
+    int err = bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+    if (err && err != -ENOTCONN) {
+        LOG_WRN("disconnect LE failed (%d)", err);
+    }
+}
+
+static void purge_le_radio(void) {
+    int err = bt_le_adv_stop();
+    if (err && err != -EALREADY) {
+        LOG_WRN("bt_le_adv_stop on transition: %d", err);
+    }
+    bt_conn_foreach(BT_CONN_TYPE_LE, disconnect_le_conn_cb, NULL);
+}
+
 static void trigger_transition(void) {
+    /* Always free the radio before asking ZMK to switch transports. */
+    purge_le_radio();
+
     if (s_mode == DUAL_ROLE_MODE_CENTRAL) {
         LOG_INF("Promoting: disabling peripheral stub, enabling central bt");
         /* C2: Disable peripheral first (peripheral stub becomes available, ZMK switches off bt_peripheral) */
@@ -163,6 +190,31 @@ static void trigger_transition(void) {
     }
 }
 
+/* After demotion, ble.c may still race and call bt_le_adv_stop on what it
+ * thinks is "its" host advert — which can kill the split peripheral advert
+ * we just started. Briefly claim the peripheral stub then release it so ZMK
+ * re-enables bt_peripheral and starts advertising again. */
+static void evaluate_state(void);
+static void kick_split_adv_work_cb(struct k_work *work);
+static K_WORK_DELAYABLE_DEFINE(s_kick_split_adv_work, kick_split_adv_work_cb);
+
+static void kick_split_adv_work_cb(struct k_work *work) {
+    ARG_UNUSED(work);
+    /* Also re-check USB/dongle in case the cable was already plugged at boot
+     * (usb_conn_state_changed may have fired before we subscribed). */
+    evaluate_state();
+
+    if (s_mode != DUAL_ROLE_MODE_PERIPHERAL || !s_peripheral_status_cb) {
+        return;
+    }
+    LOG_INF("Re-arming split peripheral advertising after demotion/boot");
+    (void)bt_le_adv_stop();
+    s_kick_peripheral = true;
+    s_peripheral_status_cb(&dual_role_peripheral, stub_peripheral_get_status());
+    s_kick_peripheral = false;
+    s_peripheral_status_cb(&dual_role_peripheral, stub_peripheral_get_status());
+}
+
 static void demote_to_peripheral(void) {
     if (s_mode == DUAL_ROLE_MODE_PERIPHERAL) {
         return;
@@ -170,6 +222,7 @@ static void demote_to_peripheral(void) {
     LOG_INF("Demoting Left to PERIPHERAL mode (Dongle mode)");
     s_mode = DUAL_ROLE_MODE_PERIPHERAL;
     trigger_transition();
+    k_work_reschedule(&s_kick_split_adv_work, K_MSEC(100));
 }
 
 static void promotion_work_cb(struct k_work *work);
@@ -303,6 +356,10 @@ static int dual_role_init(void) {
                 split_peripheral_idx, dual_role_idx, keymap_idx);
     }
 
+    /* Settings + USB enumeration finish after SYS_INIT. Re-evaluate and make
+     * sure split advertising is open so the dongle can find us on a cold boot
+     * with cable already plugged (or after a previous host-HID session). */
+    k_work_reschedule(&s_kick_split_adv_work, K_MSEC(1500));
     return 0;
 }
 
