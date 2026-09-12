@@ -61,43 +61,90 @@ int __wrap_bt_le_adv_start(const struct bt_le_adv_param *param, const struct bt_
     return -ENOTSUP;
 }
 
+/* ========================================================================= */
+/* Auth Info Callbacks Wrapping (Neutralize Host Pairing in PERIPHERAL Mode) */
+/* ========================================================================= */
+
 int __real_bt_conn_auth_info_cb_register(struct bt_conn_auth_info_cb *cb);
 
-static struct bt_conn_auth_info_cb *host_auth_info;
-static struct bt_conn_auth_info_cb wrapped_auth_info;
+#define MAX_AUTH_INFO 4
 
-static void wrapped_pairing_complete(struct bt_conn *conn, bool bonded) {
+static struct {
+    void (*pairing_complete)(struct bt_conn *conn, bool bonded);
+    void (*pairing_failed)(struct bt_conn *conn, enum bt_security_err reason);
+    struct bt_conn_auth_info_cb cb;
+} s_auth_info[MAX_AUTH_INFO];
+
+static size_t s_auth_info_count = 0;
+
+static void common_pairing_complete(size_t idx, struct bt_conn *conn, bool bonded) {
     if (dual_role_get_mode() == DUAL_ROLE_MODE_PERIPHERAL) {
-        LOG_DBG("ignore host pairing_complete in peripheral mode");
+        LOG_DBG("suppress auth_info pairing_complete in PERIPHERAL mode (slot=%u)", (unsigned int)idx);
         return;
     }
-    if (host_auth_info && host_auth_info->pairing_complete) {
-        host_auth_info->pairing_complete(conn, bonded);
+    if (idx < s_auth_info_count && s_auth_info[idx].pairing_complete) {
+        s_auth_info[idx].pairing_complete(conn, bonded);
     }
 }
 
-static void wrapped_pairing_failed(struct bt_conn *conn, enum bt_security_err reason) {
+static void common_pairing_failed(size_t idx, struct bt_conn *conn, enum bt_security_err reason) {
     if (dual_role_get_mode() == DUAL_ROLE_MODE_PERIPHERAL) {
+        LOG_DBG("suppress auth_info pairing_failed in PERIPHERAL mode (slot=%u, reason=%d)",
+                (unsigned int)idx, (int)reason);
         return;
     }
-    if (host_auth_info && host_auth_info->pairing_failed) {
-        host_auth_info->pairing_failed(conn, reason);
+    if (idx < s_auth_info_count && s_auth_info[idx].pairing_failed) {
+        s_auth_info[idx].pairing_failed(conn, reason);
     }
 }
+
+#define DEFINE_AUTH_INFO_WRAPPER(idx)                                                              \
+    static void wrapped_pairing_complete_##idx(struct bt_conn *conn, bool bonded) {                 \
+        common_pairing_complete(idx, conn, bonded);                                                 \
+    }                                                                                              \
+    static void wrapped_pairing_failed_##idx(struct bt_conn *conn, enum bt_security_err reason) {  \
+        common_pairing_failed(idx, conn, reason);                                                  \
+    }
+
+DEFINE_AUTH_INFO_WRAPPER(0)
+DEFINE_AUTH_INFO_WRAPPER(1)
+DEFINE_AUTH_INFO_WRAPPER(2)
+DEFINE_AUTH_INFO_WRAPPER(3)
+
+static void (*const s_wrapped_complete_fns[])(struct bt_conn *, bool) = {
+    wrapped_pairing_complete_0,
+    wrapped_pairing_complete_1,
+    wrapped_pairing_complete_2,
+    wrapped_pairing_complete_3,
+};
+
+static void (*const s_wrapped_failed_fns[])(struct bt_conn *, enum bt_security_err) = {
+    wrapped_pairing_failed_0,
+    wrapped_pairing_failed_1,
+    wrapped_pairing_failed_2,
+    wrapped_pairing_failed_3,
+};
 
 int __wrap_bt_conn_auth_info_cb_register(struct bt_conn_auth_info_cb *cb) {
     if (cb == NULL) {
         return -EINVAL;
     }
-    if (host_auth_info == NULL) {
-        host_auth_info = cb;
-        wrapped_auth_info = *cb;
-        wrapped_auth_info.pairing_complete = wrapped_pairing_complete;
-        wrapped_auth_info.pairing_failed = wrapped_pairing_failed;
-        return __real_bt_conn_auth_info_cb_register(&wrapped_auth_info);
+    if (s_auth_info_count < MAX_AUTH_INFO) {
+        size_t idx = s_auth_info_count++;
+        s_auth_info[idx].pairing_complete = cb->pairing_complete;
+        s_auth_info[idx].pairing_failed = cb->pairing_failed;
+        s_auth_info[idx].cb = *cb;
+        s_auth_info[idx].cb.pairing_complete = s_wrapped_complete_fns[idx];
+        s_auth_info[idx].cb.pairing_failed = s_wrapped_failed_fns[idx];
+        return __real_bt_conn_auth_info_cb_register(&s_auth_info[idx].cb);
     }
+    LOG_WRN("Exceeded MAX_AUTH_INFO (%d)", MAX_AUTH_INFO);
     return __real_bt_conn_auth_info_cb_register(cb);
 }
+
+/* ========================================================================= */
+/* Auth Callbacks Wrapping (Just Works in PERIPHERAL, Host in CENTRAL)      */
+/* ========================================================================= */
 
 int __real_bt_conn_auth_cb_register(const struct bt_conn_auth_cb *cb);
 
@@ -115,6 +162,51 @@ static enum bt_security_err wrapped_pairing_accept(struct bt_conn *conn,
     return BT_SECURITY_ERR_SUCCESS;
 }
 
+static void wrapped_passkey_display(struct bt_conn *conn, unsigned int passkey) {
+    if (dual_role_get_mode() == DUAL_ROLE_MODE_PERIPHERAL) {
+        return;
+    }
+    if (host_auth_cb && host_auth_cb->passkey_display) {
+        host_auth_cb->passkey_display(conn, passkey);
+    }
+}
+
+static void wrapped_passkey_entry(struct bt_conn *conn) {
+    if (dual_role_get_mode() == DUAL_ROLE_MODE_PERIPHERAL) {
+        return;
+    }
+    if (host_auth_cb && host_auth_cb->passkey_entry) {
+        host_auth_cb->passkey_entry(conn);
+    }
+}
+
+static void wrapped_passkey_confirm(struct bt_conn *conn, unsigned int passkey) {
+    if (dual_role_get_mode() == DUAL_ROLE_MODE_PERIPHERAL) {
+        return;
+    }
+    if (host_auth_cb && host_auth_cb->passkey_confirm) {
+        host_auth_cb->passkey_confirm(conn, passkey);
+    }
+}
+
+static void wrapped_cancel(struct bt_conn *conn) {
+    if (dual_role_get_mode() == DUAL_ROLE_MODE_PERIPHERAL) {
+        return;
+    }
+    if (host_auth_cb && host_auth_cb->cancel) {
+        host_auth_cb->cancel(conn);
+    }
+}
+
+static void wrapped_pairing_confirm(struct bt_conn *conn) {
+    if (dual_role_get_mode() == DUAL_ROLE_MODE_PERIPHERAL) {
+        return;
+    }
+    if (host_auth_cb && host_auth_cb->pairing_confirm) {
+        host_auth_cb->pairing_confirm(conn);
+    }
+}
+
 int __wrap_bt_conn_auth_cb_register(const struct bt_conn_auth_cb *cb) {
     if (cb == NULL) {
         return -EINVAL;
@@ -123,6 +215,11 @@ int __wrap_bt_conn_auth_cb_register(const struct bt_conn_auth_cb *cb) {
         host_auth_cb = cb;
         wrapped_auth_cb = *cb;
         wrapped_auth_cb.pairing_accept = wrapped_pairing_accept;
+        wrapped_auth_cb.passkey_display = wrapped_passkey_display;
+        wrapped_auth_cb.passkey_entry = wrapped_passkey_entry;
+        wrapped_auth_cb.passkey_confirm = wrapped_passkey_confirm;
+        wrapped_auth_cb.cancel = wrapped_cancel;
+        wrapped_auth_cb.pairing_confirm = wrapped_pairing_confirm;
         return __real_bt_conn_auth_cb_register(&wrapped_auth_cb);
     }
     return __real_bt_conn_auth_cb_register(cb);
