@@ -17,6 +17,7 @@
 #include <zmk/split/transport/central.h>
 #include <zmk/split/transport/peripheral.h>
 #include <zmk/split/bluetooth/peripheral.h>
+#include <zmk/split/bluetooth/uuid.h>
 
 #include "dual_role.h"
 
@@ -41,11 +42,21 @@ void dual_role_set_internal_adv_call(bool internal) {
 /* Connection Inspection: Genuine Peripheral Connection Detection            */
 /* ========================================================================= */
 
+struct conn_check_data {
+    bool connected;    /* PERIPHERAL-role connection fully established */
+    bool in_progress;  /* PERIPHERAL-role connection still connecting  */
+};
+
 static void check_dongle_conn_cb(struct bt_conn *conn, void *data) {
+    struct conn_check_data *cd = (struct conn_check_data *)data;
     struct bt_conn_info info;
     if (bt_conn_get_info(conn, &info) == 0) {
         if (info.role == BT_CONN_ROLE_PERIPHERAL) {
-            *(bool *)data = true;
+            if (info.state == BT_CONN_STATE_CONNECTED) {
+                cd->connected = true;
+            } else if (info.state == BT_CONN_STATE_CONNECTING) {
+                cd->in_progress = true;
+            }
         }
     }
 }
@@ -53,13 +64,51 @@ static void check_dongle_conn_cb(struct bt_conn *conn, void *data) {
 /*
  * Returns true if an active LE connection exists where this half is acting
  * as PERIPHERAL (i.e. connected to the Dongle Central).
- * Connections where this half acts as CENTRAL (i.e. connected to the Right half)
- * are excluded.
  */
 static bool is_dongle_connected(void) {
-    bool connected = false;
-    bt_conn_foreach(BT_CONN_TYPE_LE, check_dongle_conn_cb, &connected);
-    return connected;
+    struct conn_check_data cd = { .connected = false, .in_progress = false };
+    bt_conn_foreach(BT_CONN_TYPE_LE, check_dongle_conn_cb, &cd);
+    return cd.connected;
+}
+
+/* ========================================================================= */
+/* Periodic Split Advertising Rearm (start-only, no adv_stop)                */
+/* ========================================================================= */
+
+static const struct bt_data s_split_adv_data[] = {
+    BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
+    BT_DATA_BYTES(BT_DATA_UUID16_SOME, 0x0f, 0x18),
+    BT_DATA_BYTES(BT_DATA_UUID128_ALL, ZMK_SPLIT_BT_SERVICE_UUID),
+};
+
+static void split_adv_rearm_work_cb(struct k_work *work);
+static K_WORK_DELAYABLE_DEFINE(s_split_adv_rearm_work, split_adv_rearm_work_cb);
+
+static void split_adv_rearm_work_cb(struct k_work *work) {
+    ARG_UNUSED(work);
+
+    if (s_mode != DUAL_ROLE_MODE_PERIPHERAL) {
+        return;
+    }
+
+    /* Don't touch the radio if a PERIPHERAL-role connection is up or mid-handshake. */
+    struct conn_check_data cd = { .connected = false, .in_progress = false };
+    bt_conn_foreach(BT_CONN_TYPE_LE, check_dongle_conn_cb, &cd);
+    if (cd.connected || cd.in_progress) {
+        return;
+    }
+
+    /* Try to start split advertising.  NEVER call bt_le_adv_stop here. */
+    int err = bt_le_adv_start(BT_LE_ADV_CONN, s_split_adv_data,
+                              ARRAY_SIZE(s_split_adv_data), NULL, 0);
+    if (err == 0 || err == -EALREADY) {
+        /* Success — do NOT reschedule. */
+        return;
+    }
+
+    /* Real error — retry in 2 s. */
+    LOG_WRN("split adv rearm err: %d, retrying in 2s", err);
+    k_work_reschedule(&s_split_adv_rearm_work, K_MSEC(2000));
 }
 
 /* ========================================================================= */
@@ -173,9 +222,9 @@ static void disconnect_le_conn_cb(struct bt_conn *conn, void *data) {
 }
 
 static void purge_le_radio(void) {
-    int err = dual_role_real_adv_stop();
+    int err = bt_le_adv_stop();
     if (err && err != -EALREADY) {
-        LOG_WRN("dual_role_real_adv_stop on transition: %d", err);
+        LOG_WRN("bt_le_adv_stop on transition: %d", err);
     }
     bt_conn_foreach(BT_CONN_TYPE_LE, disconnect_le_conn_cb, NULL);
 }
@@ -214,6 +263,7 @@ static void demote_to_peripheral(void) {
     LOG_INF("Demoting Left to PERIPHERAL mode (Dongle mode)");
     s_mode = DUAL_ROLE_MODE_PERIPHERAL;
     trigger_transition();
+    k_work_reschedule(&s_split_adv_rearm_work, K_MSEC(100));
 }
 
 static void evaluate_state(void);
@@ -247,6 +297,7 @@ static void promotion_work_cb(struct k_work *work) {
 
     LOG_INF("Conditions met. Promoting Left to CENTRAL mode (USB Direct mode)");
     s_mode = DUAL_ROLE_MODE_CENTRAL;
+    k_work_cancel_delayable(&s_split_adv_rearm_work);
     trigger_transition();
 }
 
@@ -359,6 +410,9 @@ static int dual_role_init(void) {
         LOG_WRN("C4 WARNING: could not locate all 3 listener subscriptions (sp=%d, dr=%d, km=%d)",
                 split_peripheral_idx, dual_role_idx, keymap_idx);
     }
+
+    /* Start-only split adv rearm (cold boot safety net, after settings load) */
+    k_work_reschedule(&s_split_adv_rearm_work, K_MSEC(2000));
 
     /* Check state shortly after boot (handles case where USB cable is already plugged at power-on) */
     k_work_reschedule(&s_boot_eval_work, K_MSEC(1500));

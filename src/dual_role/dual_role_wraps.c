@@ -61,21 +61,6 @@ int __wrap_bt_le_adv_start(const struct bt_le_adv_param *param, const struct bt_
     return -ENOTSUP;
 }
 
-int __real_bt_le_adv_stop(void);
-
-int dual_role_real_adv_stop(void) {
-    return __real_bt_le_adv_stop();
-}
-
-int __wrap_bt_le_adv_stop(void) {
-    /* If ble.c calls adv_stop in peripheral mode, ignore it to prevent killing split peripheral advertising */
-    if (dual_role_get_mode() == DUAL_ROLE_MODE_PERIPHERAL) {
-        LOG_DBG("Suppressing bt_le_adv_stop in PERIPHERAL mode");
-        return 0;
-    }
-    return __real_bt_le_adv_stop();
-}
-
 int __real_bt_conn_auth_info_cb_register(struct bt_conn_auth_info_cb *cb);
 
 static struct bt_conn_auth_info_cb *host_auth_info;
