@@ -182,6 +182,8 @@ static void wrapped_passkey_entry(struct bt_conn *conn) {
 
 static void wrapped_passkey_confirm(struct bt_conn *conn, unsigned int passkey) {
     if (dual_role_get_mode() == DUAL_ROLE_MODE_PERIPHERAL) {
+        LOG_DBG("auto-confirm passkey in PERIPHERAL mode");
+        bt_conn_auth_passkey_confirm(conn);
         return;
     }
     if (host_auth_cb && host_auth_cb->passkey_confirm) {
@@ -217,11 +219,16 @@ int __wrap_bt_conn_auth_cb_register(const struct bt_conn_auth_cb *cb) {
         host_auth_cb = cb;
         wrapped_auth_cb = *cb;
         wrapped_auth_cb.pairing_accept = wrapped_pairing_accept;
-        wrapped_auth_cb.passkey_display = wrapped_passkey_display;
-        wrapped_auth_cb.passkey_entry = wrapped_passkey_entry;
-        wrapped_auth_cb.passkey_confirm = wrapped_passkey_confirm;
-        wrapped_auth_cb.cancel = wrapped_cancel;
-        wrapped_auth_cb.pairing_confirm = wrapped_pairing_confirm;
+        wrapped_auth_cb.passkey_display =
+            cb->passkey_display ? wrapped_passkey_display : NULL;
+        wrapped_auth_cb.passkey_entry =
+            cb->passkey_entry ? wrapped_passkey_entry : NULL;
+        wrapped_auth_cb.passkey_confirm =
+            cb->passkey_confirm ? wrapped_passkey_confirm : NULL;
+        wrapped_auth_cb.cancel =
+            cb->cancel ? wrapped_cancel : NULL;
+        wrapped_auth_cb.pairing_confirm =
+            cb->pairing_confirm ? wrapped_pairing_confirm : NULL;
         return __real_bt_conn_auth_cb_register(&wrapped_auth_cb);
     }
     return __real_bt_conn_auth_cb_register(cb);
