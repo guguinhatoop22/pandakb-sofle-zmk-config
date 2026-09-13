@@ -219,16 +219,16 @@ int __wrap_bt_conn_auth_cb_register(const struct bt_conn_auth_cb *cb) {
         host_auth_cb = cb;
         wrapped_auth_cb = *cb;
         wrapped_auth_cb.pairing_accept = wrapped_pairing_accept;
-        wrapped_auth_cb.passkey_display =
-            cb->passkey_display ? wrapped_passkey_display : NULL;
-        wrapped_auth_cb.passkey_entry =
-            cb->passkey_entry ? wrapped_passkey_entry : NULL;
-        wrapped_auth_cb.passkey_confirm =
-            cb->passkey_confirm ? wrapped_passkey_confirm : NULL;
-        wrapped_auth_cb.cancel =
-            cb->cancel ? wrapped_cancel : NULL;
-        wrapped_auth_cb.pairing_confirm =
-            cb->pairing_confirm ? wrapped_pairing_confirm : NULL;
+        /*
+         * Force NULL on all passkey/display/confirmation callbacks.
+         * This ensures Zephyr's get_io_capa() reports BT_SMP_IO_NO_INPUT_OUTPUT,
+         * keeping split peripheral pairing strictly Just Works (no PIN/display timeout).
+         */
+        wrapped_auth_cb.passkey_display = NULL;
+        wrapped_auth_cb.passkey_entry = NULL;
+        wrapped_auth_cb.passkey_confirm = NULL;
+        wrapped_auth_cb.cancel = cb->cancel ? wrapped_cancel : NULL;
+        wrapped_auth_cb.pairing_confirm = NULL;
         return __real_bt_conn_auth_cb_register(&wrapped_auth_cb);
     }
     return __real_bt_conn_auth_cb_register(cb);
