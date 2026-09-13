@@ -200,6 +200,8 @@ static void wrapped_cancel(struct bt_conn *conn) {
 
 static void wrapped_pairing_confirm(struct bt_conn *conn) {
     if (dual_role_get_mode() == DUAL_ROLE_MODE_PERIPHERAL) {
+        LOG_DBG("auto-confirm Just Works pairing in PERIPHERAL mode");
+        bt_conn_auth_pairing_confirm(conn);  /* Just Works */
         return;
     }
     if (host_auth_cb && host_auth_cb->pairing_confirm) {
