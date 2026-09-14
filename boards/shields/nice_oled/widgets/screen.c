@@ -28,6 +28,14 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include "profile.h"
 #include "screen.h"
 
+#if IS_ENABLED(CONFIG_SOFLE_DUAL_ROLE) || IS_ENABLED(CONFIG_ZMK_DUAL_ROLE_USB)
+#include <dual_role.h>
+LV_IMG_DECLARE(bolt);
+LV_IMG_DECLARE(bt);
+LV_IMG_DECLARE(bt_no_signal);
+LV_IMG_DECLARE(dog_sit1);
+#endif
+
 #ifdef CONFIG_NICE_OLED_WIDGET_RAW_HID
 #include <lvgl.h>
 #include <raw_hid/hid.h>
@@ -850,12 +858,115 @@ ZMK_SUBSCRIPTION(widget_spotify_status, spotify_notification);
 static struct zmk_widget_hid_indicators hid_indicators_widget;
 #endif
 
+#if IS_ENABLED(CONFIG_SOFLE_DUAL_ROLE) || IS_ENABLED(CONFIG_ZMK_DUAL_ROLE_USB)
+static struct k_work dual_role_display_work;
+
+static void dual_role_display_work_cb(struct k_work *work) {
+    ARG_UNUSED(work);
+    struct zmk_widget_screen *widget;
+    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) {
+        draw_canvas(widget->obj, widget->cbuf, &widget->state);
+    }
+}
+
+static void on_dual_role_mode_changed(enum dual_role_mode mode) {
+    ARG_UNUSED(mode);
+    struct k_work_q *display_q = zmk_display_work_q();
+    if (display_q) {
+        k_work_submit_to_queue(display_q, &dual_role_display_work);
+    }
+}
+
+static void draw_peripheral_dongle_status(lv_obj_t *canvas, const struct status_state *state) {
+    bool dongle_connected = dual_role_is_dongle_connected();
+
+    /* 1. Top row: Battery level & Charging indicator (left) + BLE Link Icon (right) */
+    char batt_text[10];
+    snprintf(batt_text, sizeof(batt_text), "%d%%", state->battery);
+
+    lv_draw_label_dsc_t batt_label_dsc;
+    init_label_dsc(&batt_label_dsc, LVGL_FOREGROUND, &pixel_operator_mono_16, LV_TEXT_ALIGN_LEFT);
+    lv_canvas_draw_text(canvas, 2, 2, 40, &batt_label_dsc, batt_text);
+
+    if (state->charging) {
+        lv_draw_img_dsc_t bolt_dsc;
+        lv_draw_img_dsc_init(&bolt_dsc);
+        lv_canvas_draw_img(canvas, 38, 5, &bolt, &bolt_dsc);
+    }
+
+    lv_draw_img_dsc_t bt_dsc;
+    lv_draw_img_dsc_init(&bt_dsc);
+    if (dongle_connected) {
+        lv_canvas_draw_img(canvas, 52, 3, &bt, &bt_dsc);
+    } else {
+        lv_canvas_draw_img(canvas, 52, 3, &bt_no_signal, &bt_dsc);
+    }
+
+    /* Top separator line */
+    lv_point_t line1_pts[] = {{2, 22}, {66, 22}};
+    lv_draw_line_dsc_t line_dsc;
+    init_line_dsc(&line_dsc, LVGL_FOREGROUND, 1);
+    lv_canvas_draw_line(canvas, line1_pts, 2, &line_dsc);
+
+    /* 2. Middle: Inverted Rounded Badge "DONGLE" */
+    lv_draw_rect_dsc_t badge_dsc;
+    init_rect_dsc(&badge_dsc, LVGL_FOREGROUND);
+    badge_dsc.radius = 3;
+    lv_canvas_draw_rect(canvas, 4, 30, 60, 22, &badge_dsc);
+
+    lv_draw_label_dsc_t badge_text_dsc;
+    init_label_dsc(&badge_text_dsc, LVGL_BACKGROUND, &pixel_operator_mono_16, LV_TEXT_ALIGN_CENTER);
+    lv_canvas_draw_text(canvas, 4, 33, 60, &badge_text_dsc, "DONGLE");
+
+    /* 3. Sub-label: Link status text */
+    lv_draw_label_dsc_t sub_label_dsc;
+    init_label_dsc(&sub_label_dsc, LVGL_FOREGROUND, &pixel_operator_mono_12, LV_TEXT_ALIGN_CENTER);
+    lv_canvas_draw_text(canvas, 0, 58, 68, &sub_label_dsc,
+                       dongle_connected ? "LINK OK" : "SEARCHING");
+
+    /* Middle separator line */
+    lv_point_t line2_pts[] = {{2, 76}, {66, 76}};
+    lv_canvas_draw_line(canvas, line2_pts, 2, &line_dsc);
+
+    /* 4. Bottom: Pet companion art (Luna sitting) + Label */
+    lv_draw_img_dsc_t luna_dsc;
+    lv_draw_img_dsc_init(&luna_dsc);
+    /* dog_sit1 is 22x32: center horizontally at X=(68-22)/2 = 23, Y=90 */
+    lv_canvas_draw_img(canvas, 23, 90, &dog_sit1, &luna_dsc);
+
+    lv_draw_label_dsc_t foot_label_dsc;
+    init_label_dsc(&foot_label_dsc, LVGL_FOREGROUND, &pixel_operator_mono_12, LV_TEXT_ALIGN_CENTER);
+    lv_canvas_draw_text(canvas, 0, 134, 68, &foot_label_dsc, "SOFLE L");
+}
+#endif
+
 /**
  * Draw canvas
  **/
 
 static void draw_canvas(lv_obj_t *widget, lv_color_t cbuf[], const struct status_state *state) {
     lv_obj_t *canvas = lv_obj_get_child(widget, 0);
+
+#if IS_ENABLED(CONFIG_SOFLE_DUAL_ROLE) || IS_ENABLED(CONFIG_ZMK_DUAL_ROLE_USB)
+    bool is_peripheral = (dual_role_get_mode() == DUAL_ROLE_MODE_PERIPHERAL);
+#if IS_ENABLED(CONFIG_NICE_OLED_WIDGET_HID_INDICATORS)
+    lv_obj_t *hid_obj = zmk_widget_hid_indicators_obj(&hid_indicators_widget);
+    if (hid_obj) {
+        if (is_peripheral) {
+            lv_obj_add_flag(hid_obj, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_clear_flag(hid_obj, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+#endif
+
+    if (is_peripheral) {
+        draw_background(canvas);
+        draw_peripheral_dongle_status(canvas, state);
+        rotate_canvas(canvas, cbuf);
+        return;
+    }
+#endif
 
     // Draw widgets
     draw_background(canvas);
@@ -1201,6 +1312,11 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
     IS_ENABLED(CONFIG_NICE_OLED_SHOW_SLEEP_ART_ON_SLEEP)
     zmk_widget_sleep_status_init(&sleep_status_widget, canvas);
     lv_obj_align(zmk_widget_sleep_status_obj(&sleep_status_widget), LV_ALIGN_TOP_LEFT, CONFIG_NICE_OLED_WIDGET_SLEEP_STATUS_CUSTOM_X, CONFIG_NICE_OLED_WIDGET_SLEEP_STATUS_CUSTOM_Y);
+#endif
+
+#if IS_ENABLED(CONFIG_SOFLE_DUAL_ROLE) || IS_ENABLED(CONFIG_ZMK_DUAL_ROLE_USB)
+    k_work_init(&dual_role_display_work, dual_role_display_work_cb);
+    dual_role_register_mode_callback(on_dual_role_mode_changed);
 #endif
 
     return 0;

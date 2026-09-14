@@ -65,10 +65,20 @@ static void check_dongle_conn_cb(struct bt_conn *conn, void *data) {
  * Returns true if an active LE connection exists where this half is acting
  * as PERIPHERAL (i.e. connected to the Dongle Central).
  */
-static bool is_dongle_connected(void) {
+bool dual_role_is_dongle_connected(void) {
     struct conn_check_data cd = { .connected = false, .in_progress = false };
     bt_conn_foreach(BT_CONN_TYPE_LE, check_dongle_conn_cb, &cd);
     return cd.connected;
+}
+
+static inline bool is_dongle_connected(void) {
+    return dual_role_is_dongle_connected();
+}
+
+static dual_role_mode_changed_cb_t s_mode_changed_cb = NULL;
+
+void dual_role_register_mode_callback(dual_role_mode_changed_cb_t cb) {
+    s_mode_changed_cb = cb;
 }
 
 /* ========================================================================= */
@@ -254,6 +264,10 @@ static void trigger_transition(void) {
             s_peripheral_status_cb(&dual_role_peripheral, stub_peripheral_get_status());
         }
     }
+
+    if (s_mode_changed_cb) {
+        s_mode_changed_cb(s_mode);
+    }
 }
 
 static void demote_to_peripheral(void) {
@@ -304,9 +318,19 @@ static void promotion_work_cb(struct k_work *work) {
 static void evaluate_state(void) {
     enum zmk_usb_conn_state usb_state = zmk_usb_get_conn_state();
     bool dongle_connected = is_dongle_connected();
+    static bool s_last_dongle_connected = false;
 
     LOG_DBG("Evaluate state: USB=%d, DongleConnected=%d, CurrentMode=%d",
             usb_state, dongle_connected, s_mode);
+
+    if (s_mode == DUAL_ROLE_MODE_PERIPHERAL && dongle_connected != s_last_dongle_connected) {
+        s_last_dongle_connected = dongle_connected;
+        if (s_mode_changed_cb) {
+            s_mode_changed_cb(s_mode);
+        }
+    } else {
+        s_last_dongle_connected = dongle_connected;
+    }
 
     if (usb_state == ZMK_USB_CONN_HID && !dongle_connected) {
         if (s_mode == DUAL_ROLE_MODE_PERIPHERAL) {

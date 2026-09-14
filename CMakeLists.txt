@@ -21,6 +21,7 @@ if(CONFIG_SOFLE_DUAL_ROLE)
     ${CMAKE_CURRENT_SOURCE_DIR}/src/dual_role/dual_role_wraps.c
   )
   target_include_directories(app PRIVATE ${ZMK_APP}/include ${ZMK_APP}/src/split/bluetooth)
+  zephyr_include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/dual_role)
 
   # Also wrap bt_foreach_bond so hybrid Left open-advertises as split peripheral
   # (otherwise it directed-advertises to the last bond, e.g. a phone, and the

@@ -10,6 +10,7 @@ if(CONFIG_ZMK_DISPLAY AND CONFIG_NICE_OLED_WIDGET_STATUS)
     zephyr_library_include_directories(${ZEPHYR_CURRENT_MODULE_DIR}/include)
     zephyr_library_include_directories(${ZEPHYR_CURRENT_CMAKE_DIR}/include)
     zephyr_library_include_directories(include)
+    zephyr_library_include_directories(${CMAKE_CURRENT_LIST_DIR}/../../../src/dual_role)
     zephyr_library_sources(${font_sources})
 
     if (CONFIG_NICE_OLED_WIDGET_RAW_HID_DRIVER)
