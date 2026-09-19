@@ -878,65 +878,54 @@ static void on_dual_role_mode_changed(enum dual_role_mode mode) {
 }
 
 static void draw_peripheral_dongle_status(lv_obj_t *canvas, const struct status_state *state) {
+    /*
+     * Portrait coords before rotate_canvas():
+     *   X = panel height (only 0..32 visible on 128x32 SSD1306)
+     *   Y = panel width  (only 0..128 visible)
+     * Horizontal strip: [batt][bt] [DONGLE/LINK] [Luna]
+     */
     bool dongle_connected = dual_role_is_dongle_connected();
+    const int panel_h = 32;
+    const int panel_w = 128;
 
-    /* 1. Top row: Battery level & Charging indicator (left) + BLE Link Icon (right) */
-    char batt_text[10];
+    lv_draw_img_dsc_t img_dsc;
+    lv_draw_img_dsc_init(&img_dsc);
+
+    char batt_text[8];
     snprintf(batt_text, sizeof(batt_text), "%d%%", state->battery);
-
     lv_draw_label_dsc_t batt_label_dsc;
-    init_label_dsc(&batt_label_dsc, LVGL_FOREGROUND, &pixel_operator_mono_16, LV_TEXT_ALIGN_LEFT);
-    lv_canvas_draw_text(canvas, 2, 2, 40, &batt_label_dsc, batt_text);
+    init_label_dsc(&batt_label_dsc, LVGL_FOREGROUND, &pixel_operator_mono_12, LV_TEXT_ALIGN_LEFT);
+    lv_canvas_draw_text(canvas, 2, 2, 34, &batt_label_dsc, batt_text);
 
     if (state->charging) {
-        lv_draw_img_dsc_t bolt_dsc;
-        lv_draw_img_dsc_init(&bolt_dsc);
-        lv_canvas_draw_img(canvas, 38, 5, &bolt, &bolt_dsc);
+        lv_canvas_draw_img(canvas, 18, 18, &bolt, &img_dsc);
     }
 
-    lv_draw_img_dsc_t bt_dsc;
-    lv_draw_img_dsc_init(&bt_dsc);
-    if (dongle_connected) {
-        lv_canvas_draw_img(canvas, 52, 3, &bt, &bt_dsc);
-    } else {
-        lv_canvas_draw_img(canvas, 52, 3, &bt_no_signal, &bt_dsc);
-    }
+    /* BT icon — 12x15, vertically centered in the 32px band */
+    lv_canvas_draw_img(canvas, (panel_h - 15) / 2, 36,
+                       dongle_connected ? &bt : &bt_no_signal, &img_dsc);
 
-    /* Top separator line */
-    lv_point_t line1_pts[] = {{2, 22}, {66, 22}};
-    lv_draw_line_dsc_t line_dsc;
-    init_line_dsc(&line_dsc, LVGL_FOREGROUND, 1);
-    lv_canvas_draw_line(canvas, line1_pts, 2, &line_dsc);
-
-    /* 2. Middle: Inverted Rounded Badge "DONGLE" */
+    /* Center badge + link stacked in the 32px band */
+    const int badge_x = 6;
+    const int badge_y = 54;
+    const int badge_w = 50;
+    const int badge_h = 14;
     lv_draw_rect_dsc_t badge_dsc;
     init_rect_dsc(&badge_dsc, LVGL_FOREGROUND);
-    badge_dsc.radius = 3;
-    lv_canvas_draw_rect(canvas, 4, 30, 60, 22, &badge_dsc);
+    badge_dsc.radius = 2;
+    lv_canvas_draw_rect(canvas, badge_x, badge_y, badge_w, badge_h, &badge_dsc);
 
     lv_draw_label_dsc_t badge_text_dsc;
-    init_label_dsc(&badge_text_dsc, LVGL_BACKGROUND, &pixel_operator_mono_16, LV_TEXT_ALIGN_CENTER);
-    lv_canvas_draw_text(canvas, 4, 33, 60, &badge_text_dsc, "DONGLE");
+    init_label_dsc(&badge_text_dsc, LVGL_BACKGROUND, &pixel_operator_mono_12, LV_TEXT_ALIGN_CENTER);
+    lv_canvas_draw_text(canvas, badge_x + 1, badge_y, badge_w, &badge_text_dsc, "DONGLE");
 
-    /* 3. Sub-label: Link status text */
-    lv_draw_label_dsc_t sub_label_dsc;
-    init_label_dsc(&sub_label_dsc, LVGL_FOREGROUND, &pixel_operator_mono_12, LV_TEXT_ALIGN_CENTER);
-    lv_canvas_draw_text(canvas, 0, 58, 68, &sub_label_dsc,
-                       dongle_connected ? "LINK OK" : "SEARCHING");
+    lv_draw_label_dsc_t link_dsc;
+    init_label_dsc(&link_dsc, LVGL_FOREGROUND, &pixel_operator_mono_12, LV_TEXT_ALIGN_CENTER);
+    lv_canvas_draw_text(canvas, badge_x + badge_h + 1, badge_y, badge_w, &link_dsc,
+                        dongle_connected ? "LINK OK" : "SEARCHING");
 
-    /* Middle separator line */
-    lv_point_t line2_pts[] = {{2, 76}, {66, 76}};
-    lv_canvas_draw_line(canvas, line2_pts, 2, &line_dsc);
-
-    /* 4. Bottom: Pet companion art (Luna sitting) + Label */
-    lv_draw_img_dsc_t luna_dsc;
-    lv_draw_img_dsc_init(&luna_dsc);
-    /* dog_sit1 is 22x32: center horizontally at X=(68-22)/2 = 23, Y=90 */
-    lv_canvas_draw_img(canvas, 23, 90, &dog_sit1, &luna_dsc);
-
-    lv_draw_label_dsc_t foot_label_dsc;
-    init_label_dsc(&foot_label_dsc, LVGL_FOREGROUND, &pixel_operator_mono_12, LV_TEXT_ALIGN_CENTER);
-    lv_canvas_draw_text(canvas, 0, 134, 68, &foot_label_dsc, "SOFLE L");
+    /* Luna 22x32 fills panel height; flush right to visible 128 edge */
+    lv_canvas_draw_img(canvas, 0, panel_w - 22, &dog_sit1, &img_dsc);
 }
 #endif
 
@@ -961,7 +950,9 @@ static void draw_canvas(lv_obj_t *widget, lv_color_t cbuf[], const struct status
 #endif
 
     if (is_peripheral) {
-        draw_background(canvas);
+        /* Full buffer clear — draw_background only fills 68x160 and leaves
+         * central-UI pixels that rotate_canvas would otherwise smear. */
+        lv_canvas_fill_bg(canvas, LVGL_BACKGROUND, LV_OPA_COVER);
         draw_peripheral_dongle_status(canvas, state);
         rotate_canvas(canvas, cbuf);
         return;
