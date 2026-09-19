@@ -33,7 +33,39 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 LV_IMG_DECLARE(bolt);
 LV_IMG_DECLARE(bt);
 LV_IMG_DECLARE(bt_no_signal);
-LV_IMG_DECLARE(dog_sit1);
+
+/* Pokémon sprites for peripheral mode animation (48 frames, 32x32 each) */
+LV_IMG_DECLARE(pokemon_00); LV_IMG_DECLARE(pokemon_01); LV_IMG_DECLARE(pokemon_02);
+LV_IMG_DECLARE(pokemon_03); LV_IMG_DECLARE(pokemon_04); LV_IMG_DECLARE(pokemon_05);
+LV_IMG_DECLARE(pokemon_06); LV_IMG_DECLARE(pokemon_07); LV_IMG_DECLARE(pokemon_08);
+LV_IMG_DECLARE(pokemon_09); LV_IMG_DECLARE(pokemon_10); LV_IMG_DECLARE(pokemon_11);
+LV_IMG_DECLARE(pokemon_12); LV_IMG_DECLARE(pokemon_13); LV_IMG_DECLARE(pokemon_14);
+LV_IMG_DECLARE(pokemon_15); LV_IMG_DECLARE(pokemon_16); LV_IMG_DECLARE(pokemon_17);
+LV_IMG_DECLARE(pokemon_18); LV_IMG_DECLARE(pokemon_19); LV_IMG_DECLARE(pokemon_20);
+LV_IMG_DECLARE(pokemon_21); LV_IMG_DECLARE(pokemon_22); LV_IMG_DECLARE(pokemon_23);
+LV_IMG_DECLARE(pokemon_24); LV_IMG_DECLARE(pokemon_25); LV_IMG_DECLARE(pokemon_26);
+LV_IMG_DECLARE(pokemon_27); LV_IMG_DECLARE(pokemon_28); LV_IMG_DECLARE(pokemon_29);
+LV_IMG_DECLARE(pokemon_30); LV_IMG_DECLARE(pokemon_31); LV_IMG_DECLARE(pokemon_32);
+LV_IMG_DECLARE(pokemon_33); LV_IMG_DECLARE(pokemon_34); LV_IMG_DECLARE(pokemon_35);
+LV_IMG_DECLARE(pokemon_36); LV_IMG_DECLARE(pokemon_37); LV_IMG_DECLARE(pokemon_38);
+LV_IMG_DECLARE(pokemon_39); LV_IMG_DECLARE(pokemon_40); LV_IMG_DECLARE(pokemon_41);
+LV_IMG_DECLARE(pokemon_42); LV_IMG_DECLARE(pokemon_43); LV_IMG_DECLARE(pokemon_44);
+LV_IMG_DECLARE(pokemon_45); LV_IMG_DECLARE(pokemon_46); LV_IMG_DECLARE(pokemon_47);
+
+#define POKEMON_FRAME_COUNT 48
+#define POKEMON_ANIM_MS 250
+
+static const lv_img_dsc_t *s_pokemon_imgs[POKEMON_FRAME_COUNT] = {
+    &pokemon_00, &pokemon_01, &pokemon_02, &pokemon_03, &pokemon_04, &pokemon_05,
+    &pokemon_06, &pokemon_07, &pokemon_08, &pokemon_09, &pokemon_10, &pokemon_11,
+    &pokemon_12, &pokemon_13, &pokemon_14, &pokemon_15, &pokemon_16, &pokemon_17,
+    &pokemon_18, &pokemon_19, &pokemon_20, &pokemon_21, &pokemon_22, &pokemon_23,
+    &pokemon_24, &pokemon_25, &pokemon_26, &pokemon_27, &pokemon_28, &pokemon_29,
+    &pokemon_30, &pokemon_31, &pokemon_32, &pokemon_33, &pokemon_34, &pokemon_35,
+    &pokemon_36, &pokemon_37, &pokemon_38, &pokemon_39, &pokemon_40, &pokemon_41,
+    &pokemon_42, &pokemon_43, &pokemon_44, &pokemon_45, &pokemon_46, &pokemon_47,
+};
+static int s_pokemon_frame = 0;
 #endif
 
 #ifdef CONFIG_NICE_OLED_WIDGET_RAW_HID
@@ -860,6 +892,7 @@ static struct zmk_widget_hid_indicators hid_indicators_widget;
 
 #if IS_ENABLED(CONFIG_SOFLE_DUAL_ROLE) || IS_ENABLED(CONFIG_ZMK_DUAL_ROLE_USB)
 static struct k_work dual_role_display_work;
+static struct k_work_delayable s_pokemon_anim_work;
 
 static void dual_role_display_work_cb(struct k_work *work) {
     ARG_UNUSED(work);
@@ -869,11 +902,32 @@ static void dual_role_display_work_cb(struct k_work *work) {
     }
 }
 
-static void on_dual_role_mode_changed(enum dual_role_mode mode) {
-    ARG_UNUSED(mode);
+static void pokemon_anim_work_cb(struct k_work *work) {
+    ARG_UNUSED(work);
+    s_pokemon_frame = (s_pokemon_frame + 1) % POKEMON_FRAME_COUNT;
+    /* Trigger canvas redraw on the display work queue */
     struct k_work_q *display_q = zmk_display_work_q();
     if (display_q) {
         k_work_submit_to_queue(display_q, &dual_role_display_work);
+    }
+    /* Keep animating while in peripheral mode */
+    if (dual_role_get_mode() == DUAL_ROLE_MODE_PERIPHERAL) {
+        k_work_reschedule(&s_pokemon_anim_work, K_MSEC(POKEMON_ANIM_MS));
+    }
+}
+
+static void on_dual_role_mode_changed(enum dual_role_mode mode) {
+    struct k_work_q *display_q = zmk_display_work_q();
+    if (display_q) {
+        k_work_submit_to_queue(display_q, &dual_role_display_work);
+    }
+    if (mode == DUAL_ROLE_MODE_PERIPHERAL) {
+        /* Start pokemon animation loop */
+        s_pokemon_frame = 0;
+        k_work_reschedule(&s_pokemon_anim_work, K_MSEC(POKEMON_ANIM_MS));
+    } else {
+        /* Stop animation when switching to central/USB */
+        k_work_cancel_delayable(&s_pokemon_anim_work);
     }
 }
 
@@ -933,10 +987,11 @@ static void draw_peripheral_dongle_status(lv_obj_t *canvas, const struct status_
         lv_canvas_draw_text(canvas, 3, 78, 26, &link_label_dsc, "ING");
     }
 
-    /* 5. Luna pet companion (dog_sit1 22x32: Y in [96, 127], X in [5, 26]) */
-    lv_draw_img_dsc_t luna_dsc;
-    lv_draw_img_dsc_init(&luna_dsc);
-    lv_canvas_draw_img(canvas, 5, 96, &dog_sit1, &luna_dsc);
+    /* 5. Pokémon animated companion (32x32: Y in [96, 127], X in [0, 31]) */
+    lv_draw_img_dsc_t poke_dsc;
+    lv_draw_img_dsc_init(&poke_dsc);
+    const lv_img_dsc_t *poke_img = s_pokemon_imgs[s_pokemon_frame % POKEMON_FRAME_COUNT];
+    lv_canvas_draw_img(canvas, 0, 96, poke_img, &poke_dsc);
 }
 #endif
 
@@ -1318,7 +1373,11 @@ int zmk_widget_screen_init(struct zmk_widget_screen *widget, lv_obj_t *parent) {
 
 #if IS_ENABLED(CONFIG_SOFLE_DUAL_ROLE) || IS_ENABLED(CONFIG_ZMK_DUAL_ROLE_USB)
     k_work_init(&dual_role_display_work, dual_role_display_work_cb);
+    k_work_init_delayable(&s_pokemon_anim_work, pokemon_anim_work_cb);
     dual_role_register_mode_callback(on_dual_role_mode_changed);
+    if (dual_role_get_mode() == DUAL_ROLE_MODE_PERIPHERAL) {
+        k_work_reschedule(&s_pokemon_anim_work, K_MSEC(POKEMON_ANIM_MS));
+    }
 #endif
 
     return 0;
