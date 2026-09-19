@@ -885,47 +885,58 @@ static void draw_peripheral_dongle_status(lv_obj_t *canvas, const struct status_
      * Horizontal strip: [batt][bt] [DONGLE/LINK] [Luna]
      */
     bool dongle_connected = dual_role_is_dongle_connected();
-    const int panel_h = 32;
-    const int panel_w = 128;
 
-    lv_draw_img_dsc_t img_dsc;
-    lv_draw_img_dsc_init(&img_dsc);
-
-    char batt_text[8];
-    snprintf(batt_text, sizeof(batt_text), "%d%%", state->battery);
+    /* 1. Battery level & Charging bolt (Y in [2, 17], X in [0, 31]) */
+    char batt_text[10];
     lv_draw_label_dsc_t batt_label_dsc;
-    init_label_dsc(&batt_label_dsc, LVGL_FOREGROUND, &pixel_operator_mono_12, LV_TEXT_ALIGN_LEFT);
-    lv_canvas_draw_text(canvas, 2, 2, 34, &batt_label_dsc, batt_text);
+    init_label_dsc(&batt_label_dsc, LVGL_FOREGROUND, &pixel_operator_mono_16, LV_TEXT_ALIGN_LEFT);
 
     if (state->charging) {
-        lv_canvas_draw_img(canvas, 18, 18, &bolt, &img_dsc);
+        snprintf(batt_text, sizeof(batt_text), "%d", state->battery);
+        lv_canvas_draw_text(canvas, 1, 2, 23, &batt_label_dsc, batt_text);
+        lv_draw_img_dsc_t bolt_dsc;
+        lv_draw_img_dsc_init(&bolt_dsc);
+        lv_canvas_draw_img(canvas, 25, 5, &bolt, &bolt_dsc);
+    } else {
+        snprintf(batt_text, sizeof(batt_text), "%d%%", state->battery);
+        int batt_x = (state->battery >= 100) ? 0 : 4;
+        lv_canvas_draw_text(canvas, batt_x, 2, 32, &batt_label_dsc, batt_text);
     }
 
-    /* BT icon — 12x15, vertically centered in the 32px band */
-    lv_canvas_draw_img(canvas, (panel_h - 15) / 2, 36,
-                       dongle_connected ? &bt : &bt_no_signal, &img_dsc);
+    /* 2. BLE Link Icon (Y in [20, 34], X in [10, 21]) */
+    lv_draw_img_dsc_t bt_dsc;
+    lv_draw_img_dsc_init(&bt_dsc);
+    if (dongle_connected) {
+        lv_canvas_draw_img(canvas, 10, 20, &bt, &bt_dsc);
+    } else {
+        lv_canvas_draw_img(canvas, 10, 20, &bt_no_signal, &bt_dsc);
+    }
 
-    /* Center badge + link stacked in the 32px band */
-    const int badge_x = 6;
-    const int badge_y = 54;
-    const int badge_w = 50;
-    const int badge_h = 14;
+    /* 3. Inverted Rounded Badge "DONGLE" (Y in [38, 59], X in [3, 28]) */
     lv_draw_rect_dsc_t badge_dsc;
     init_rect_dsc(&badge_dsc, LVGL_FOREGROUND);
-    badge_dsc.radius = 2;
-    lv_canvas_draw_rect(canvas, badge_x, badge_y, badge_w, badge_h, &badge_dsc);
+    badge_dsc.radius = 3;
+    lv_canvas_draw_rect(canvas, 3, 38, 26, 22, &badge_dsc);
 
     lv_draw_label_dsc_t badge_text_dsc;
-    init_label_dsc(&badge_text_dsc, LVGL_BACKGROUND, &pixel_operator_mono_12, LV_TEXT_ALIGN_CENTER);
-    lv_canvas_draw_text(canvas, badge_x + 1, badge_y, badge_w, &badge_text_dsc, "DONGLE");
+    init_label_dsc(&badge_text_dsc, LVGL_BACKGROUND, &pixel_operator_mono_8, LV_TEXT_ALIGN_CENTER);
+    lv_canvas_draw_text(canvas, 3, 45, 26, &badge_text_dsc, "DONGLE");
 
-    lv_draw_label_dsc_t link_dsc;
-    init_label_dsc(&link_dsc, LVGL_FOREGROUND, &pixel_operator_mono_12, LV_TEXT_ALIGN_CENTER);
-    lv_canvas_draw_text(canvas, badge_x + badge_h + 1, badge_y, badge_w, &link_dsc,
-                        dongle_connected ? "LINK OK" : "SEARCHING");
+    /* 4. Link Status text (Y in [64, 88], X in [2, 29]) */
+    lv_draw_label_dsc_t link_label_dsc;
+    init_label_dsc(&link_label_dsc, LVGL_FOREGROUND, &pixel_operator_mono_8, LV_TEXT_ALIGN_CENTER);
 
-    /* Luna 22x32 fills panel height; flush right to visible 128 edge */
-    lv_canvas_draw_img(canvas, 0, panel_w - 22, &dog_sit1, &img_dsc);
+    if (dongle_connected) {
+        lv_canvas_draw_text(canvas, 2, 72, 28, &link_label_dsc, "LINK OK");
+    } else {
+        lv_canvas_draw_text(canvas, 3, 66, 26, &link_label_dsc, "SEARCH");
+        lv_canvas_draw_text(canvas, 3, 78, 26, &link_label_dsc, "ING");
+    }
+
+    /* 5. Luna pet companion (dog_sit1 22x32: Y in [96, 127], X in [5, 26]) */
+    lv_draw_img_dsc_t luna_dsc;
+    lv_draw_img_dsc_init(&luna_dsc);
+    lv_canvas_draw_img(canvas, 5, 96, &dog_sit1, &luna_dsc);
 }
 #endif
 
