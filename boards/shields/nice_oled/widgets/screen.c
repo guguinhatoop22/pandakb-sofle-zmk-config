@@ -34,36 +34,36 @@ LV_IMG_DECLARE(bolt);
 LV_IMG_DECLARE(bt);
 LV_IMG_DECLARE(bt_no_signal);
 
-/* Pokémon sprites for peripheral mode animation (48 frames, 32x32 each) */
-LV_IMG_DECLARE(pokemon_00); LV_IMG_DECLARE(pokemon_01); LV_IMG_DECLARE(pokemon_02);
-LV_IMG_DECLARE(pokemon_03); LV_IMG_DECLARE(pokemon_04); LV_IMG_DECLARE(pokemon_05);
-LV_IMG_DECLARE(pokemon_06); LV_IMG_DECLARE(pokemon_07); LV_IMG_DECLARE(pokemon_08);
-LV_IMG_DECLARE(pokemon_09); LV_IMG_DECLARE(pokemon_10); LV_IMG_DECLARE(pokemon_11);
-LV_IMG_DECLARE(pokemon_12); LV_IMG_DECLARE(pokemon_13); LV_IMG_DECLARE(pokemon_14);
-LV_IMG_DECLARE(pokemon_15); LV_IMG_DECLARE(pokemon_16); LV_IMG_DECLARE(pokemon_17);
-LV_IMG_DECLARE(pokemon_18); LV_IMG_DECLARE(pokemon_19); LV_IMG_DECLARE(pokemon_20);
-LV_IMG_DECLARE(pokemon_21); LV_IMG_DECLARE(pokemon_22); LV_IMG_DECLARE(pokemon_23);
-LV_IMG_DECLARE(pokemon_24); LV_IMG_DECLARE(pokemon_25); LV_IMG_DECLARE(pokemon_26);
-LV_IMG_DECLARE(pokemon_27); LV_IMG_DECLARE(pokemon_28); LV_IMG_DECLARE(pokemon_29);
-LV_IMG_DECLARE(pokemon_30); LV_IMG_DECLARE(pokemon_31); LV_IMG_DECLARE(pokemon_32);
-LV_IMG_DECLARE(pokemon_33); LV_IMG_DECLARE(pokemon_34); LV_IMG_DECLARE(pokemon_35);
-LV_IMG_DECLARE(pokemon_36); LV_IMG_DECLARE(pokemon_37); LV_IMG_DECLARE(pokemon_38);
-LV_IMG_DECLARE(pokemon_39); LV_IMG_DECLARE(pokemon_40); LV_IMG_DECLARE(pokemon_41);
-LV_IMG_DECLARE(pokemon_42); LV_IMG_DECLARE(pokemon_43); LV_IMG_DECLARE(pokemon_44);
-LV_IMG_DECLARE(pokemon_45); LV_IMG_DECLARE(pokemon_46); LV_IMG_DECLARE(pokemon_47);
+/* Pre-rotated Pokémon sprites for portrait canvas (48 frames, 32x32 each) */
+LV_IMG_DECLARE(pokemon_portrait_00); LV_IMG_DECLARE(pokemon_portrait_01); LV_IMG_DECLARE(pokemon_portrait_02);
+LV_IMG_DECLARE(pokemon_portrait_03); LV_IMG_DECLARE(pokemon_portrait_04); LV_IMG_DECLARE(pokemon_portrait_05);
+LV_IMG_DECLARE(pokemon_portrait_06); LV_IMG_DECLARE(pokemon_portrait_07); LV_IMG_DECLARE(pokemon_portrait_08);
+LV_IMG_DECLARE(pokemon_portrait_09); LV_IMG_DECLARE(pokemon_portrait_10); LV_IMG_DECLARE(pokemon_portrait_11);
+LV_IMG_DECLARE(pokemon_portrait_12); LV_IMG_DECLARE(pokemon_portrait_13); LV_IMG_DECLARE(pokemon_portrait_14);
+LV_IMG_DECLARE(pokemon_portrait_15); LV_IMG_DECLARE(pokemon_portrait_16); LV_IMG_DECLARE(pokemon_portrait_17);
+LV_IMG_DECLARE(pokemon_portrait_18); LV_IMG_DECLARE(pokemon_portrait_19); LV_IMG_DECLARE(pokemon_portrait_20);
+LV_IMG_DECLARE(pokemon_portrait_21); LV_IMG_DECLARE(pokemon_portrait_22); LV_IMG_DECLARE(pokemon_portrait_23);
+LV_IMG_DECLARE(pokemon_portrait_24); LV_IMG_DECLARE(pokemon_portrait_25); LV_IMG_DECLARE(pokemon_portrait_26);
+LV_IMG_DECLARE(pokemon_portrait_27); LV_IMG_DECLARE(pokemon_portrait_28); LV_IMG_DECLARE(pokemon_portrait_29);
+LV_IMG_DECLARE(pokemon_portrait_30); LV_IMG_DECLARE(pokemon_portrait_31); LV_IMG_DECLARE(pokemon_portrait_32);
+LV_IMG_DECLARE(pokemon_portrait_33); LV_IMG_DECLARE(pokemon_portrait_34); LV_IMG_DECLARE(pokemon_portrait_35);
+LV_IMG_DECLARE(pokemon_portrait_36); LV_IMG_DECLARE(pokemon_portrait_37); LV_IMG_DECLARE(pokemon_portrait_38);
+LV_IMG_DECLARE(pokemon_portrait_39); LV_IMG_DECLARE(pokemon_portrait_40); LV_IMG_DECLARE(pokemon_portrait_41);
+LV_IMG_DECLARE(pokemon_portrait_42); LV_IMG_DECLARE(pokemon_portrait_43); LV_IMG_DECLARE(pokemon_portrait_44);
+LV_IMG_DECLARE(pokemon_portrait_45); LV_IMG_DECLARE(pokemon_portrait_46); LV_IMG_DECLARE(pokemon_portrait_47);
 
 #define POKEMON_FRAME_COUNT 48
 #define POKEMON_ANIM_MS 250
 
 static const lv_img_dsc_t *s_pokemon_imgs[POKEMON_FRAME_COUNT] = {
-    &pokemon_00, &pokemon_01, &pokemon_02, &pokemon_03, &pokemon_04, &pokemon_05,
-    &pokemon_06, &pokemon_07, &pokemon_08, &pokemon_09, &pokemon_10, &pokemon_11,
-    &pokemon_12, &pokemon_13, &pokemon_14, &pokemon_15, &pokemon_16, &pokemon_17,
-    &pokemon_18, &pokemon_19, &pokemon_20, &pokemon_21, &pokemon_22, &pokemon_23,
-    &pokemon_24, &pokemon_25, &pokemon_26, &pokemon_27, &pokemon_28, &pokemon_29,
-    &pokemon_30, &pokemon_31, &pokemon_32, &pokemon_33, &pokemon_34, &pokemon_35,
-    &pokemon_36, &pokemon_37, &pokemon_38, &pokemon_39, &pokemon_40, &pokemon_41,
-    &pokemon_42, &pokemon_43, &pokemon_44, &pokemon_45, &pokemon_46, &pokemon_47,
+    &pokemon_portrait_00, &pokemon_portrait_01, &pokemon_portrait_02, &pokemon_portrait_03, &pokemon_portrait_04, &pokemon_portrait_05,
+    &pokemon_portrait_06, &pokemon_portrait_07, &pokemon_portrait_08, &pokemon_portrait_09, &pokemon_portrait_10, &pokemon_portrait_11,
+    &pokemon_portrait_12, &pokemon_portrait_13, &pokemon_portrait_14, &pokemon_portrait_15, &pokemon_portrait_16, &pokemon_portrait_17,
+    &pokemon_portrait_18, &pokemon_portrait_19, &pokemon_portrait_20, &pokemon_portrait_21, &pokemon_portrait_22, &pokemon_portrait_23,
+    &pokemon_portrait_24, &pokemon_portrait_25, &pokemon_portrait_26, &pokemon_portrait_27, &pokemon_portrait_28, &pokemon_portrait_29,
+    &pokemon_portrait_30, &pokemon_portrait_31, &pokemon_portrait_32, &pokemon_portrait_33, &pokemon_portrait_34, &pokemon_portrait_35,
+    &pokemon_portrait_36, &pokemon_portrait_37, &pokemon_portrait_38, &pokemon_portrait_39, &pokemon_portrait_40, &pokemon_portrait_41,
+    &pokemon_portrait_42, &pokemon_portrait_43, &pokemon_portrait_44, &pokemon_portrait_45, &pokemon_portrait_46, &pokemon_portrait_47,
 };
 static int s_pokemon_frame = 0;
 #endif

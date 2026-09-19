@@ -84,9 +84,9 @@ if(CONFIG_ZMK_DISPLAY AND CONFIG_NICE_OLED_WIDGET_STATUS)
       zephyr_library_sources(widgets/profile.c)
       zephyr_library_sources(widgets/screen.c)
 
-      # Include pokemon sprites for dual-role peripheral mode animation
+      # Include pre-rotated pokemon sprites for dual-role peripheral mode animation
       if(CONFIG_SOFLE_DUAL_ROLE OR CONFIG_ZMK_DUAL_ROLE_USB)
-        zephyr_library_sources(assets/pokemon.c)
+        zephyr_library_sources(assets/pokemon_portrait.c)
       endif()
     else()
 
