@@ -987,7 +987,13 @@ static void draw_peripheral_dongle_status(lv_obj_t *canvas, const struct status_
         lv_canvas_draw_text(canvas, 3, 78, 26, &link_label_dsc, "ING");
     }
 
-    /* 5. Pokémon animated companion (32x32: Y in [96, 127], X in [0, 31]) */
+    /* 5. Pokémon animated companion (32x32: Y in [96, 127], X in [0, 31])
+     * ORIENTAÇÃO FÍSICA NO SSD1306 128x32 (NÃO ESQUECER JAMAIS):
+     * O canvas portrait é rotacionado 90° CW por rotate_canvas() em util.c.
+     * Para que o Pokémon fique de pé virado para o usuário (patas em Y_screen=31,
+     * cabeça em Y_screen=0), os sprites em pokemon_portrait.c foram pré-rotacionados
+     * com a fórmula P[r, c] = L[c, 31 - r].
+     */
     lv_draw_img_dsc_t poke_dsc;
     lv_draw_img_dsc_init(&poke_dsc);
     const lv_img_dsc_t *poke_img = s_pokemon_imgs[s_pokemon_frame % POKEMON_FRAME_COUNT];
